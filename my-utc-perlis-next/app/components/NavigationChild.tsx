@@ -38,7 +38,7 @@ const NavigationChild = () => {
           {/* UTC Logo */}
           <div className="flex-1 flex justify-center">
             <Link href="/" className="relative w-24 h-16">
-              <Image src="/logo-utc-perlis.png" alt="UTC Logo" fill className="object-contain" />
+              <img src="/logo-utc-perlis.png" alt="UTC Logo" fill className="object-contain" />
             </Link>
           </div>
 

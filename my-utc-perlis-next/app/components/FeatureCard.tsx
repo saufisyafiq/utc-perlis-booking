@@ -15,7 +15,7 @@ const FeatureCard = ({ title, description, icon, href }: FeatureCardProps) => {
     <Link href={href} className="block">
       <div className="bg-card hover:bg-blue-900 rounded-3xl shadow-lg p-8 transition-all duration-300 hover:-translate-y-1 group min-h-[240px] flex flex-col items-start text-left">
         <div className="w-24 h-24 bg-blue-50 group-hover:bg-blue-800 rounded-full flex items-center justify-center transition-colors mb-8">
-          <Image 
+          <img 
             src={icon} 
             alt={title} 
             width={40} 

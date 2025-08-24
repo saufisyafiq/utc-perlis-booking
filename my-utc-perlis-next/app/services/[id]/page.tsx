@@ -73,7 +73,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
         <div className="bg-card rounded-xl shadow-lg overflow-hidden">
           {/* Hero Image */}
           <div className="relative h-64 w-full">
-            <Image
+            <img
               src={`http://localhost:1337${service.image[0].url}`}
               alt={service.name}
               fill
