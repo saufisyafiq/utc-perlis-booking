@@ -1,0 +1,26 @@
+# Docker Compose for Strapi deployment only
+services:
+  # Strapi Backend
+  strapi:
+    build:
+      context: ./strapi/my-utc-perlis
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_SSL: false
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      HOST: 0.0.0.0
+      PORT: 1337
+      NODE_ENV: production
+      PUBLIC_URL: ${PUBLIC_URL}
+    ports:
+      - "1337:1337"
