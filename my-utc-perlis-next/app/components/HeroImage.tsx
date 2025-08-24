@@ -22,7 +22,7 @@ const HeroImage = ({ imageUrl, alt }: HeroImageProps) => {
         <Image
           src={imageUrl}
           alt={alt}
-          
+          fill
           className="object-cover"
         />
         {/* Overlay with zoom icon */}

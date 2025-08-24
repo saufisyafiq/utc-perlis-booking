@@ -28,7 +28,7 @@ const FacilityCard = ({
             <Image
               src={imageUrl}
               alt={title}
-            
+              fill
               className="object-cover"
             />
           </div>

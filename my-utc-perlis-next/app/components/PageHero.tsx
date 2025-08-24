@@ -12,7 +12,7 @@ const PageHero = ({ title, imageUrl }: PageHeroProps) => {
         src={imageUrl} 
         alt={title}  
         className="object-cover"
-         
+        fill
       />
       
       {/* Overlay */}

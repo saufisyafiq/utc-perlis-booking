@@ -55,7 +55,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, alt }: ImageModalProps) => {
                   <Image
                     src={imageUrl}
                     alt={alt}
-                  
+                    fill
                     className="object-contain"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
                   />

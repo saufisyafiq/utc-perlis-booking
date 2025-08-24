@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'reac
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import AvailabilityCalendar from '../components/AvailabilityCalendar';
 import SimpleBookingSelector from '../components/SimpleBookingSelector';
 import { SimpleBookingLogic } from '../lib/simple-booking-logic';
@@ -974,7 +975,9 @@ const memoizedExistingBookings = useMemo(() => {
                     facilityData.image[0].url
                   }`} 
                   alt={facilityData.name} 
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
                 />
                 <div className="absolute bottom-0 right-0 bg-blue-500 text-white px-4 py-2 text-sm font-semibold">
                   Tempahan Baru

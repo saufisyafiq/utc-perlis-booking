@@ -58,7 +58,7 @@ const ServiceCard = ({
         <Image
           src={imageUrl}
           alt={name}
-          
+          fill
           className="object-cover"
         />
       </div>
