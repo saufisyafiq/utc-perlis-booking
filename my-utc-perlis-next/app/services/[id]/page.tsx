@@ -76,7 +76,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
             <img
               src={`http://localhost:1337${service.image[0].url}`}
               alt={service.name}
-              fill
+              
               className="object-cover"
             />
           </div>

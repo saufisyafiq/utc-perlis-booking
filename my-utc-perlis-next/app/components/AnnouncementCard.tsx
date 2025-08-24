@@ -28,7 +28,7 @@ const AnnouncementCard = ({
           <img
             src={imageUrl}
             alt={title}
-            fill
+            
             className="object-cover"
           />
         </div>

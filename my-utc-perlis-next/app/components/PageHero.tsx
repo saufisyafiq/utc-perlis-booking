@@ -10,10 +10,9 @@ const PageHero = ({ title, imageUrl }: PageHeroProps) => {
     <div className="relative h-[400px] w-full">
       <img 
         src={imageUrl} 
-        alt={title} 
-        fill 
+        alt={title}  
         className="object-cover"
-        priority 
+         
       />
       
       {/* Overlay */}

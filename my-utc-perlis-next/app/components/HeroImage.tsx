@@ -22,7 +22,7 @@ const HeroImage = ({ imageUrl, alt }: HeroImageProps) => {
         <img
           src={imageUrl}
           alt={alt}
-          fill
+          
           className="object-cover"
         />
         {/* Overlay with zoom icon */}
@@ -31,7 +31,7 @@ const HeroImage = ({ imageUrl, alt }: HeroImageProps) => {
         </div>
       </div>
 
-      <imgModal
+      <ImageModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         imageUrl={imageUrl}

@@ -54,7 +54,7 @@ const Navigation = () => {
             </div>
             <div className="flex-1 flex justify-center">
               <Link href="/" className="relative w-24 h-16">
-                <img src="/logo-utc-perlis.png" alt="UTC Logo" fill className="object-contain" />
+                <img src="/logo-utc-perlis.png" alt="UTC Logo" className="object-contain" />
               </Link>
             </div>
             <div className="flex-1 flex justify-center">
@@ -88,7 +88,7 @@ const Navigation = () => {
 
           <div className="flex-1 flex justify-center">
             <Link href="/" className="relative w-24 h-16">
-              <img src="/logo-utc-perlis.png" alt="UTC Logo" fill className="object-contain" />
+              <img src="/logo-utc-perlis.png" alt="UTC Logo"  className="object-contain" />
             </Link>
           </div>
 
