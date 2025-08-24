@@ -1,0 +1,131 @@
+{
+  "kind": "collectionType",
+  "collectionName": "bookings",
+  "info": {
+    "singularName": "booking",
+    "pluralName": "bookings",
+    "displayName": "Booking",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "jabatan": {
+      "type": "string"
+    },
+    "address": {
+      "type": "text"
+    },
+    "phoneNo": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "eventName": {
+      "type": "string"
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "startTime": {
+      "type": "time"
+    },
+    "endTime": {
+      "type": "time"
+    },
+    "attendance": {
+      "type": "integer"
+    },
+    "totalPrice": {
+      "type": "decimal"
+    },
+    "packageType": {
+      "type": "enumeration",
+      "enum": [
+        "HOURLY",
+        "HALF_DAY",
+        "FULL_DAY",
+        "MULTI_DAY"
+      ]
+    },
+    "rentDetails": {
+      "type": "json"
+    },
+    "meal": {
+      "type": "json"
+    },
+    "facility": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::facility.facility"
+    },
+    "bookingStatus": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "AWAITING PAYMENT",
+        "REVIEW PAYMENT",
+        "APPROVED",
+        "REJECTED",
+        "CANCELLED"
+      ]
+    },
+    "paymentStatus": {
+      "type": "enumeration",
+      "default": "UNPAID",
+      "enum": [
+        "UNPAID",
+        "PAID",
+        "VERIFIED",
+        "REFUNDED",
+        "FAILED"
+      ]
+    },
+    "statusReason": {
+      "type": "text"
+    },
+    "processedAt": {
+      "type": "datetime"
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "dokumen_berkaitan": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "files",
+        "images"
+      ]
+    },
+    "bookingNumber": {
+      "type": "string",
+      "unique": true,
+      "required": false
+    },
+    "proofOfPayment": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    }
+  }
+}

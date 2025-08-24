@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_schedule_shift_schedule_shifts",
+  "info": {
+    "displayName": "Schedule Shift",
+    "icon": "bulletList"
+  },
+  "options": {},
+  "attributes": {
+    "startTime": {
+      "type": "time",
+      "required": true,
+      "default": "08:00:00.000"
+    },
+    "endTime": {
+      "type": "time",
+      "default": "17:00:00.000",
+      "required": true
+    },
+    "isRest": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_pricing_pricing_details",
+  "info": {
+    "displayName": "Pricing Details",
+    "icon": "briefcase"
+  },
+  "options": {},
+  "attributes": {
+    "basePrice": {
+      "type": "decimal"
+    },
+    "equipmentPrice": {
+      "type": "decimal"
+    },
+    "cateringPrice": {
+      "type": "decimal"
+    },
+    "tax": {
+      "type": "decimal"
+    },
+    "total": {
+      "type": "decimal"
+    }
+  }
+}

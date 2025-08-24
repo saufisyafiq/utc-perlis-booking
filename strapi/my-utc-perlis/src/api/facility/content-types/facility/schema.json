@@ -1,0 +1,68 @@
+{
+  "kind": "collectionType",
+  "collectionName": "facilities",
+  "info": {
+    "singularName": "facility",
+    "pluralName": "facilities",
+    "displayName": "facility",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "capacity": {
+      "type": "integer"
+    },
+    "amenities": {
+      "type": "json"
+    },
+    "rates": {
+      "type": "json"
+    },
+    "image": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "minimumDuration": {
+      "type": "integer"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "MEETING_ROOM",
+        "SEMINAR_ROOM",
+        "ICT_ROOM",
+        "EXHIBITION"
+      ]
+    },
+    "facilityStatus": {
+      "type": "enumeration",
+      "enum": [
+        "AVAILABLE",
+        "OCCUPIED",
+        "MAINTENANCE"
+      ]
+    },
+    "equipmentRates": {
+      "type": "json"
+    },
+    "guidelines": {
+      "type": "json"
+    }
+  }
+}

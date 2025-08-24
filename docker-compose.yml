@@ -1,0 +1,79 @@
+# Docker Compose for local development and testing
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: utc-postgres
+    environment:
+      POSTGRES_DB: strapi
+      POSTGRES_USER: strapi
+      POSTGRES_PASSWORD: strapi
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - utc-network
+
+  # Strapi Backend
+  strapi:
+    build:
+      context: ./strapi/my-utc-perlis
+      dockerfile: Dockerfile
+    container_name: utc-strapi
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi
+      DATABASE_USERNAME: strapi
+      DATABASE_PASSWORD: strapi
+      JWT_SECRET: test-jwt-secret-for-local-development-only
+      ADMIN_JWT_SECRET: test-admin-jwt-secret-for-local-development-only
+      APP_KEYS: test-key1,test-key2,test-key3,test-key4
+      API_TOKEN_SALT: test-api-token-salt-for-local-development-only
+      TRANSFER_TOKEN_SALT: test-transfer-token-salt-for-local-development-only
+      HOST: 0.0.0.0
+      PORT: 1337
+      NODE_ENV: production
+    ports:
+      - "1337:1337"
+    depends_on:
+      - postgres
+    volumes:
+      - strapi_uploads:/app/public/uploads
+    networks:
+      - utc-network
+
+  # Next.js Frontend
+  nextjs:
+    build:
+      context: ./my-utc-perlis-next
+      dockerfile: Dockerfile
+    container_name: utc-nextjs
+    environment:
+      NEXT_PUBLIC_STRAPI_API_URL: http://strapi:1337
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      STRAPI_API_TOKEN: test-strapi-api-token-for-local-development-only
+      # Email configuration
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: test@example.com
+      SMTP_PASS: test-password
+      FROM_EMAIL: test@example.com
+      FROM_NAME: UTC Perlis
+    ports:
+      - "3000:3000"
+    depends_on:
+      - strapi
+    networks:
+      - utc-network
+
+volumes:
+  postgres_data:
+  strapi_uploads:
+
+networks:
+  utc-network:
+    driver: bridge

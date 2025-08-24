@@ -1,0 +1,28 @@
+{
+  "collectionName": "components_payment_paymen_details",
+  "info": {
+    "displayName": "Paymen Details",
+    "icon": "database"
+  },
+  "options": {},
+  "attributes": {
+    "payment_status": {
+      "type": "enumeration",
+      "enum": [
+        "PENDING",
+        "PAID",
+        "REFUNDED",
+        "FAILED"
+      ]
+    },
+    "method": {
+      "type": "string"
+    },
+    "transactionId": {
+      "type": "string"
+    },
+    "paidAt": {
+      "type": "datetime"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "kind": "collectionType",
+  "collectionName": "services",
+  "info": {
+    "singularName": "service",
+    "pluralName": "services",
+    "displayName": "service",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "image": {
+      "type": "media",
+      "multiple": true,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "service_status": {
+      "type": "enumeration",
+      "enum": [
+        "AVAILABLE",
+        "MAINTENANCE",
+        "CLOSE"
+      ],
+      "required": true,
+      "default": "AVAILABLE"
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "website": {
+      "type": "string"
+    },
+    "operatingDay": {
+      "type": "string"
+    },
+    "availableServices": {
+      "type": "json",
+      "required": false
+    },
+    "operatingHours": {
+      "displayName": "schedule.operating-schedule",
+      "type": "component",
+      "repeatable": true,
+      "component": "operating-hour.schedule-operating-schedule",
+      "required": true
+    }
+  }
+}

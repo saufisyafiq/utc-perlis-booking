@@ -1,0 +1,20 @@
+{
+  "collectionName": "components_operating_hour_schedule_operating_schedules",
+  "info": {
+    "displayName": "schedule.operating-schedule",
+    "icon": "apps"
+  },
+  "options": {},
+  "attributes": {
+    "dayRange": {
+      "type": "string"
+    },
+    "scheduleShift": {
+      "displayName": "Schedule Shift",
+      "type": "component",
+      "repeatable": true,
+      "component": "schedule-shift.schedule-shift",
+      "required": true
+    }
+  }
+}
