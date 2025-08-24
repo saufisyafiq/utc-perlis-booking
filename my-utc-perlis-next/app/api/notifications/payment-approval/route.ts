@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
                     </div>
                     <div style="text-align: center; min-width: 200px;">
                       <p><strong>Kod QR untuk Pembayaran:</strong></p>
-                      <img src="${process.env.NEXT_PUBLIC_SITE_URL}/qr.png" alt="QR Code untuk Pembayaran" style="max-width: 200px; height: auto; border: 2px solid #ddd; border-radius: 8px; margin: 10px 0;" />
+                      <Image src="${process.env.NEXT_PUBLIC_SITE_URL}/qr.png" alt="QR Code untuk Pembayaran" style="max-width: 200px; height: auto; border: 2px solid #ddd; border-radius: 8px; margin: 10px 0;" />
                       <p style="font-size: 12px; color: #666; margin-top: 10px;">Imbas kod QR ini untuk pembayaran pantas</p>
                     </div>
                   </div>

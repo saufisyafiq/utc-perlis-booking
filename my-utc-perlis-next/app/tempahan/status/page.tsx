@@ -488,7 +488,7 @@ function BookingStatusContent() {
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-blue-800 mb-2">Kod QR untuk Pembayaran:</p>
-                    <img 
+                    <Image 
                       src="/qr.png" 
                       alt="QR Code untuk Pembayaran" 
                       className="max-w-40 h-auto border-2 border-blue-300 rounded-lg mx-auto"

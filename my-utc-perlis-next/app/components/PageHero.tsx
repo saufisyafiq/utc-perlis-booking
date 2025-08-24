@@ -8,7 +8,7 @@ interface PageHeroProps {
 const PageHero = ({ title, imageUrl }: PageHeroProps) => {
   return (
     <div className="relative h-[400px] w-full">
-      <img 
+      <Image 
         src={imageUrl} 
         alt={title}  
         className="object-cover"

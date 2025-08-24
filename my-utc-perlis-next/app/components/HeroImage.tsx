@@ -19,7 +19,7 @@ const HeroImage = ({ imageUrl, alt }: HeroImageProps) => {
         className="relative h-[400px] w-full cursor-pointer group"
         onClick={() => setIsModalOpen(true)}
       >
-        <img
+        <Image
           src={imageUrl}
           alt={alt}
           

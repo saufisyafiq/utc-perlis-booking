@@ -25,7 +25,7 @@ const FacilityCard = ({
         <div className="relative">
           {/* Image container */}
           <div className="relative h-64 w-full">
-            <img
+            <Image
               src={imageUrl}
               alt={title}
             

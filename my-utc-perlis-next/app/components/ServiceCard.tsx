@@ -55,7 +55,7 @@ const ServiceCard = ({
   return (
     <div className="bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
       <div className="relative h-48 w-full">
-        <img
+        <Image
           src={imageUrl}
           alt={name}
           

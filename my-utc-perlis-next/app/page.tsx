@@ -41,7 +41,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen">
       <div className="relative h-[650px] w-full">
-        <img src="/hero-utc.jpg" alt="Hero"  className="object-cover"  />
+        <Image src="/hero-utc.jpg" alt="Hero" fill className="object-cover" priority />
         
         {/* Content overlay */}
         <div className="absolute inset-0 bg-black/30" />

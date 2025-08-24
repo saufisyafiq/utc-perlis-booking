@@ -25,7 +25,7 @@ const AnnouncementCard = ({
     <div className="bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
       <Link href={href}>
         <div className="relative h-48 w-full">
-          <img
+          <Image
             src={imageUrl}
             alt={title}
             

@@ -52,7 +52,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, alt }: ImageModalProps) => {
 
                 {/* Image */}
                 <div className="relative h-[80vh] w-full">
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={alt}
                   

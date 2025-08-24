@@ -966,7 +966,7 @@ const memoizedExistingBookings = useMemo(() => {
             </div>
             {facilityData.image && facilityData.image.length > 0 && (
               <div className="md:w-1/3 relative">
-                <img 
+                <Image 
                   src={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${
                     facilityData.image[0].formats?.medium?.url || 
                     facilityData.image[0].formats?.small?.url || 

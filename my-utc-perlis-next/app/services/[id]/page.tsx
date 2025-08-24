@@ -35,7 +35,7 @@ const formatTime = (time: string) => {
 
 
 async function getService(documentId: string) {
-  const res = await fetch(`http://localhost:1337/api/services?filters[documentId][$eq]=${documentId}&populate[operatingHours][populate][scheduleShift]=*&populate=image`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/services?filters[documentId][$eq]=${documentId}&populate[operatingHours][populate][scheduleShift]=*&populate=image`, {
     cache: 'no-store'
   });
   
@@ -72,14 +72,21 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
         {/* Main Content */}
         <div className="bg-card rounded-xl shadow-lg overflow-hidden">
           {/* Hero Image */}
-          <div className="relative h-64 w-full">
-            <img
-              src={`http://localhost:1337${service.image[0].url}`}
-              alt={service.name}
-              
-              className="object-cover"
-            />
-          </div>
+          {service.image && service.image.length > 0 && (
+            <div className="relative h-64 w-full">
+              <Image
+                src={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${service.image[0].url}`}
+                alt={service.name}
+                fill
+                className="object-cover rounded-t-xl"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/hero-utc.jpg'; // Fallback image
+                }}
+              />
+            </div>
+          )}
 
           <div className="p-8">
             {/* Title and Location */}
