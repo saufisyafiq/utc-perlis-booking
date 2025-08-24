@@ -9,6 +9,9 @@ export default ({ env }) => ({
     token: {
       salt: env('TRANSFER_TOKEN_SALT'),
     },
+    remote: {
+      enabled: true, // Enable data transfer
+    },
   },
   flags: {
     nps: env.bool('FLAG_NPS', true),
