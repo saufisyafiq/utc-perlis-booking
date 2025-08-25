@@ -1,7 +1,13 @@
 /**
- * Script to fix media URLs after HTTPS migration
- * This script updates all existing file URLs from HTTP to HTTPS
+ * Standalone script to fix media URLs
+ * Run with: node fix-urls.js
  */
+
+const path = require('path');
+const fs = require('fs');
+
+// Set up the environment
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 async function fixMediaUrls() {
   let strapi;
@@ -9,11 +15,27 @@ async function fixMediaUrls() {
   try {
     console.log('🚀 Starting media URL migration...');
     
-    // Initialize Strapi (v5 compatible)
-    const strapiFactory = require('@strapi/strapi');
-    strapi = strapiFactory({ distDir: './dist' });
-    await strapi.load();
+    // Change to the correct directory
+    process.chdir(__dirname);
     
+    // Check if dist folder exists
+    if (!fs.existsSync('./dist')) {
+      console.log('⚠️ No dist folder found. Running npm run build first...');
+      const { execSync } = require('child_process');
+      execSync('npm run build', { stdio: 'inherit' });
+    }
+    
+    // Import Strapi
+    const createStrapi = require('@strapi/strapi');
+    
+    // Initialize Strapi instance
+    strapi = createStrapi({
+      distDir: path.join(__dirname, 'dist'),
+      appDir: __dirname,
+    });
+    
+    // Load Strapi
+    await strapi.load();
     console.log('✅ Strapi initialized successfully');
     
     // Get all files from the upload plugin
@@ -23,6 +45,11 @@ async function fixMediaUrls() {
     
     console.log(`📁 Found ${files.length} files to process`);
     
+    if (files.length === 0) {
+      console.log('ℹ️ No files found to update');
+      return;
+    }
+    
     let updatedCount = 0;
     
     for (const file of files) {
@@ -31,7 +58,6 @@ async function fixMediaUrls() {
       
       // Fix main URL if it contains localhost or http://
       if (file.url && (file.url.includes('localhost') || file.url.startsWith('http://'))) {
-        // Replace localhost or http with the correct HTTPS URL
         let newUrl = file.url;
         if (newUrl.includes('localhost')) {
           newUrl = newUrl.replace(/http:\/\/localhost:\d+/, 'https://strapi.utcperlis.com');
@@ -50,7 +76,7 @@ async function fixMediaUrls() {
         let formatsChanged = false;
         
         for (const [formatName, formatData] of Object.entries(file.formats)) {
-          if (formatData.url && (formatData.url.includes('localhost') || formatData.url.startsWith('http://'))) {
+          if (formatData && formatData.url && (formatData.url.includes('localhost') || formatData.url.startsWith('http://'))) {
             let newUrl = formatData.url;
             if (newUrl.includes('localhost')) {
               newUrl = newUrl.replace(/http:\/\/localhost:\d+/, 'https://strapi.utcperlis.com');
@@ -88,9 +114,9 @@ async function fixMediaUrls() {
     
   } catch (error) {
     console.error('❌ Error during media URL migration:', error);
+    console.error('Stack trace:', error.stack);
     throw error;
   } finally {
-    // Close Strapi properly
     if (strapi) {
       try {
         await strapi.destroy();
@@ -99,20 +125,12 @@ async function fixMediaUrls() {
         console.warn('⚠️ Warning: Error closing Strapi instance:', destroyError.message);
       }
     }
+    process.exit(0);
   }
 }
 
 // Run the migration
-if (require.main === module) {
-  fixMediaUrls()
-    .then(() => {
-      console.log('✨ Migration script completed successfully');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('💥 Migration script failed:', error);
-      process.exit(1);
-    });
-}
-
-module.exports = { fixMediaUrls };
+fixMediaUrls().catch((error) => {
+  console.error('💥 Migration script failed:', error);
+  process.exit(1);
+});

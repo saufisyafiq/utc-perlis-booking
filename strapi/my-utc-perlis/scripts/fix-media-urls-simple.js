@@ -1,20 +1,13 @@
 /**
- * Script to fix media URLs after HTTPS migration
- * This script updates all existing file URLs from HTTP to HTTPS
+ * Simple script to fix media URLs after HTTPS migration
+ * Run with: npm run strapi -- scripts:fix-media-urls
  */
 
-async function fixMediaUrls() {
-  let strapi;
-  
+'use strict';
+
+module.exports = async ({ strapi }) => {
   try {
     console.log('🚀 Starting media URL migration...');
-    
-    // Initialize Strapi (v5 compatible)
-    const strapiFactory = require('@strapi/strapi');
-    strapi = strapiFactory({ distDir: './dist' });
-    await strapi.load();
-    
-    console.log('✅ Strapi initialized successfully');
     
     // Get all files from the upload plugin
     const files = await strapi.db.query('plugin::upload.file').findMany({
@@ -50,7 +43,7 @@ async function fixMediaUrls() {
         let formatsChanged = false;
         
         for (const [formatName, formatData] of Object.entries(file.formats)) {
-          if (formatData.url && (formatData.url.includes('localhost') || formatData.url.startsWith('http://'))) {
+          if (formatData && formatData.url && (formatData.url.includes('localhost') || formatData.url.startsWith('http://'))) {
             let newUrl = formatData.url;
             if (newUrl.includes('localhost')) {
               newUrl = newUrl.replace(/http:\/\/localhost:\d+/, 'https://strapi.utcperlis.com');
@@ -89,30 +82,5 @@ async function fixMediaUrls() {
   } catch (error) {
     console.error('❌ Error during media URL migration:', error);
     throw error;
-  } finally {
-    // Close Strapi properly
-    if (strapi) {
-      try {
-        await strapi.destroy();
-        console.log('✅ Strapi instance closed');
-      } catch (destroyError) {
-        console.warn('⚠️ Warning: Error closing Strapi instance:', destroyError.message);
-      }
-    }
   }
-}
-
-// Run the migration
-if (require.main === module) {
-  fixMediaUrls()
-    .then(() => {
-      console.log('✨ Migration script completed successfully');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('💥 Migration script failed:', error);
-      process.exit(1);
-    });
-}
-
-module.exports = { fixMediaUrls };
+};
