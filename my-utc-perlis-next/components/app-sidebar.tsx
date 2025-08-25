@@ -39,7 +39,7 @@ import {
 const data = {
   user: {
     name: "Admin UTC Perlis",
-    email: "admin@utc.perlis.gov.my",
+    email: "sistem.utcperlis@gmail.com",
     avatar: "/logo-utc-perlis.png",
   },
   navMain: [
