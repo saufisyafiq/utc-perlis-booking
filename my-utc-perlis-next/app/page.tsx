@@ -148,17 +148,29 @@ export default async function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {facilities.map((facility: any) => (
-              <FacilityCard 
-                key={facility.id}
-                title={facility.name}
-                location={facility.location}
-                capacity={facility.capacity}
-                price={facility.rates.hourlyRate}
-                imageUrl={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${facility.image[0].url}`}
-                documentId={facility.documentId}
-              />
-            ))}
+            {facilities.length > 0 ? (
+              facilities.map((facility: any) => (
+                <FacilityCard 
+                  key={facility.id}
+                  title={facility.name}
+                  location={facility.location}
+                  capacity={facility.capacity}
+                  price={facility.rates.hourlyRate}
+                  imageUrl={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${facility.image[0].url}`}
+                  documentId={facility.documentId}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-500 mb-4">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Fasiliti Tidak Tersedia</h3>
+                <p className="text-gray-500">Maaf, maklumat fasiliti tidak dapat dipaparkan buat masa ini. Sila cuba lagi kemudian.</p>
+              </div>
+            )}
           </div>
 
           {/* View All Button */}
@@ -181,20 +193,32 @@ export default async function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service: any) => (
-              <ServiceCard 
-                key={service.id}
-                name={service.name}
-                location={service.location}
-                description={service.description}
-                imageUrl={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${service.image[0].url}`}
-                href={`/services/${service.documentId}`}
-                phoneNumber={service.phoneNumber}
-                email={service.email}
-                website={service.website}
-                operatingHours={service.operatingHours}
-              />
-            ))}
+            {services.length > 0 ? (
+              services.map((service: any) => (
+                <ServiceCard 
+                  key={service.id}
+                  name={service.name}
+                  location={service.location}
+                  description={service.description}
+                  imageUrl={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${service.image[0].url}`}
+                  href={`/services/${service.documentId}`}
+                  phoneNumber={service.phoneNumber}
+                  email={service.email}
+                  website={service.website}
+                  operatingHours={service.operatingHours}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-500 mb-4">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Servis Tidak Tersedia</h3>
+                <p className="text-gray-500">Maaf, maklumat servis tidak dapat dipaparkan buat masa ini. Sila cuba lagi kemudian.</p>
+              </div>
+            )}
           </div>
 
           {/* View All Button */}
