@@ -20,13 +20,13 @@ const nextConfig: NextConfig = {
       // Add production Strapi URL pattern
       {
         protocol: 'https',
-        hostname: process.env.STRAPI_HOSTNAME || 'yogkw4gowc4k88owkkcksscw.168.231.119.113.sslip.io',
+        hostname: process.env.STRAPI_HOSTNAME || 'strapi.utcperlis.com',
         pathname: '/uploads/**',
       },
       // Add additional pattern for any Strapi instance
       {
         protocol: 'http',
-        hostname: process.env.STRAPI_HOSTNAME || 'yogkw4gowc4k88owkkcksscw.168.231.119.113.sslip.io',
+        hostname: process.env.STRAPI_HOSTNAME || 'strapi.utcperlis.com',
         pathname: '/uploads/**',
       },
     ],
