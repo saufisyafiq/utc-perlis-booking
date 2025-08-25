@@ -6,34 +6,88 @@ import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
 async function getFacilities() {
-  // Fetch only 3 facilities for the homepage preview
-  const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/facilities?populate=*&pagination[limit]=3`, {
-    cache: 'no-store'
-  });
-  
-  if (!res.ok) {
-    throw new Error('Failed to fetch facilities');
+  try {
+    // Fetch only 3 facilities for the homepage preview
+    const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL;
+    if (!apiUrl) {
+      throw new Error('NEXT_PUBLIC_STRAPI_API_URL is not configured');
+    }
+
+    console.log('Fetching facilities from:', `${apiUrl}/api/facilities?populate=*&pagination[limit]=3`);
+    
+    const res = await fetch(`${apiUrl}/api/facilities?populate=*&pagination[limit]=3`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Add timeout
+      signal: AbortSignal.timeout(10000) // 10 seconds timeout
+    });
+    
+    if (!res.ok) {
+      console.error('Failed to fetch facilities:', res.status, res.statusText);
+      throw new Error(`Failed to fetch facilities: ${res.status} ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Facilities fetched successfully:', data.data?.length || 0, 'items');
+    return data;
+  } catch (error) {
+    console.error('Error in getFacilities:', error);
+    throw error;
   }
-  
-  return res.json();
 }
 
 async function getServices() {
-  // Fetch only 3 services for the homepage preview
-  const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/services?populate[operatingHours][populate][scheduleShift]=*&populate=image&pagination[limit]=3`, {
-    cache: 'no-store'
-  });
-  
-  if (!res.ok) {
-    throw new Error('Failed to fetch services');
+  try {
+    // Fetch only 3 services for the homepage preview
+    const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL;
+    if (!apiUrl) {
+      throw new Error('NEXT_PUBLIC_STRAPI_API_URL is not configured');
+    }
+
+    console.log('Fetching services from:', `${apiUrl}/api/services?populate[operatingHours][populate][scheduleShift]=*&populate=image&pagination[limit]=3`);
+    
+    const res = await fetch(`${apiUrl}/api/services?populate[operatingHours][populate][scheduleShift]=*&populate=image&pagination[limit]=3`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Add timeout
+      signal: AbortSignal.timeout(10000) // 10 seconds timeout
+    });
+    
+    if (!res.ok) {
+      console.error('Failed to fetch services:', res.status, res.statusText);
+      throw new Error(`Failed to fetch services: ${res.status} ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    console.log('Services fetched successfully:', data.data?.length || 0, 'items');
+    return data;
+  } catch (error) {
+    console.error('Error in getServices:', error);
+    throw error;
   }
-  
-  return res.json();
 }
 
 export default async function Home() {
-  const facilitiesData = await getFacilities();
-  const servicesData = await getServices();
+  let facilitiesData;
+  let servicesData;
+  
+  try {
+    facilitiesData = await getFacilities();
+  } catch (error) {
+    console.error('Failed to load facilities:', error);
+    facilitiesData = { data: [] };
+  }
+  
+  try {
+    servicesData = await getServices();
+  } catch (error) {
+    console.error('Failed to load services:', error);
+    servicesData = { data: [] };
+  }
   
   const facilities = facilitiesData.data || [];
   const services = servicesData.data || [];
