@@ -498,17 +498,18 @@ module.exports = createCoreController('api::booking.booking', ({ strapi }: { str
         return ctx.badRequest('Booking is not in awaiting payment status');
       }
 
-      // Update booking status to REVIEW PAYMENT and ensure it remains published
+      // Update booking status to REVIEW PAYMENT and paymentStatus to PAID
       const updatedBooking = await strapi.documents('api::booking.booking').update({
         documentId: booking.documentId,
         data: {
           bookingStatus: 'REVIEW PAYMENT',
+          paymentStatus: 'PAID',
           processedAt: new Date().toISOString(),
         },
         status: 'published'
       });
 
-      console.log('[DEBUG] Updated booking status to REVIEW PAYMENT');
+      console.log('[DEBUG] Updated booking status to REVIEW PAYMENT and paymentStatus to PAID');
 
       return {
         success: true,

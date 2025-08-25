@@ -224,6 +224,7 @@ const memoizedExistingBookings = useMemo(() => {
   const peralatanTambahan = watch('rental.additionalEquipment');
   const bilanganKehadiran = watch('attendance');
   const mineralWater = watch('food.mineralWater') || 0;
+  const foodOptions = watch('food');
 
   // Calculate days difference
   const calculateDaysDifference = () => {
@@ -256,6 +257,22 @@ const memoizedExistingBookings = useMemo(() => {
     // Calculate water cost (RM1.00 per bottle)
     const waterCost = mineralWater * 1.00;
 
+    // Calculate food cost (RM10 per pax for each selected food option)
+    const foodCost = (() => {
+      let totalFoodCost = 0;
+      const attendance = bilanganKehadiran || 0;
+      
+      if (attendance > 0 && foodOptions) {
+        // RM10 per pax for each selected food option
+        if (foodOptions.breakfast) totalFoodCost += attendance * 10;
+        if (foodOptions.lunch) totalFoodCost += attendance * 10;
+        if (foodOptions.dinner) totalFoodCost += attendance * 10;
+        if (foodOptions.supper) totalFoodCost += attendance * 10;
+      }
+      
+      return totalFoodCost;
+    })();
+
     // Use the simplified pricing engine
     try {
       const { createPricingEngine } = require('../lib/pricing-engine');
@@ -269,9 +286,9 @@ const memoizedExistingBookings = useMemo(() => {
         selectedEquipment
       );
 
-      // Add water cost to total
-      const totalWithWater = result.totalPrice + waterCost;
-      setTotalPrice(totalWithWater);
+      // Add water cost and food cost to total
+      const totalWithExtras = result.totalPrice + waterCost + foodCost;
+      setTotalPrice(totalWithExtras);
       
       // Create a simple breakdown for display
       const breakdown = result.breakdown.map((item: any) => 
@@ -283,6 +300,19 @@ const memoizedExistingBookings = useMemo(() => {
       // Add water cost to breakdown if applicable
       if (waterCost > 0) {
         breakdown.push(`Air Mineral: RM1.00 × ${mineralWater} = RM${waterCost.toFixed(2)}`);
+      }
+      
+      // Add food cost to breakdown if applicable
+      if (foodCost > 0 && bilanganKehadiran > 0 && foodOptions) {
+        const selectedFoodItems = [];
+        if (foodOptions.breakfast) selectedFoodItems.push('Makan Pagi');
+        if (foodOptions.lunch) selectedFoodItems.push('Makan Tengahari');
+        if (foodOptions.dinner) selectedFoodItems.push('Makan Petang');
+        if (foodOptions.supper) selectedFoodItems.push('Makan Malam');
+        
+        if (selectedFoodItems.length > 0) {
+          breakdown.push(`Makanan (${selectedFoodItems.join(', ')}): RM10.00 × ${bilanganKehadiran} × ${selectedFoodItems.length} = RM${foodCost.toFixed(2)}`);
+        }
       }
       
       // Add savings note if applicable
@@ -316,7 +346,7 @@ const memoizedExistingBookings = useMemo(() => {
           equipmentPrice += rate;
         });
         
-        const totalFallback = basePrice + equipmentPrice + waterCost;
+        const totalFallback = basePrice + equipmentPrice + waterCost + foodCost;
         setTotalPrice(totalFallback);
         
           const fallbackBreakdown = [`Sewa Fasiliti (${hours} jam): RM${basePrice}`];
@@ -326,12 +356,23 @@ const memoizedExistingBookings = useMemo(() => {
         if (waterCost > 0) {
           fallbackBreakdown.push(`Air Mineral: RM${waterCost.toFixed(2)}`);
         }
+        if (foodCost > 0 && foodOptions) {
+          const selectedFoodItems = [];
+          if (foodOptions.breakfast) selectedFoodItems.push('Makan Pagi');
+          if (foodOptions.lunch) selectedFoodItems.push('Makan Tengahari');
+          if (foodOptions.dinner) selectedFoodItems.push('Makan Petang');
+          if (foodOptions.supper) selectedFoodItems.push('Makan Malam');
+          
+          if (selectedFoodItems.length > 0) {
+            fallbackBreakdown.push(`Makanan (${selectedFoodItems.join(', ')}): RM${foodCost.toFixed(2)}`);
+          }
+        }
         
         setPriceBreakdown(fallbackBreakdown.join('\n'));
         }
       }
     }
-  }, [facilityData, startDate, endDate, startTimeForm, endTime, peralatanTambahan, mineralWater, selectedDuration]);
+  }, [facilityData, startDate, endDate, startTimeForm, endTime, peralatanTambahan, mineralWater, selectedDuration, bilanganKehadiran, foodOptions]);
 
   // Reset times when dates change
   useEffect(() => {
@@ -365,7 +406,7 @@ const memoizedExistingBookings = useMemo(() => {
     if (facilityData && startDate && endDate) {
       calculatePrice();
     }
-  }, [calculatePrice, facilityData, startDate, endDate, startTimeForm, endTime, peralatanTambahan, mineralWater]);
+  }, [calculatePrice, facilityData, startDate, endDate, startTimeForm, endTime, peralatanTambahan, mineralWater, foodOptions]);
 
   // Additional useEffect to ensure price calculation when step changes to 4
   useEffect(() => {
@@ -607,6 +648,19 @@ const memoizedExistingBookings = useMemo(() => {
         // Add water cost
         if (mineralWater > 0) {
           calculatedTotal += mineralWater * 1.00;
+        }
+        
+        // Add food cost
+        if (bilanganKehadiran > 0 && foodOptions) {
+          let foodCount = 0;
+          if (foodOptions.breakfast) foodCount++;
+          if (foodOptions.lunch) foodCount++;
+          if (foodOptions.dinner) foodCount++;
+          if (foodOptions.supper) foodCount++;
+          
+          if (foodCount > 0) {
+            calculatedTotal += bilanganKehadiran * 10 * foodCount; // RM10 per pax per food option
+          }
         }
         
         frontendTotalPrice = calculatedTotal;
@@ -1499,34 +1553,102 @@ const memoizedExistingBookings = useMemo(() => {
                   type="checkbox"
                   {...register('food.breakfast')}
                   className="mr-2"
+                  onChange={(e) => {
+                    setValue('food.breakfast', e.target.checked);
+                    // Trigger price calculation after a short delay to ensure state updates
+                    setTimeout(() => calculatePrice(), 100);
+                  }}
                 />
-                Makan Pagi
+                Makan Pagi (RM10.00 per pax)
               </label>
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
                   {...register('food.lunch')}
                   className="mr-2"
+                  onChange={(e) => {
+                    setValue('food.lunch', e.target.checked);
+                    // Trigger price calculation after a short delay to ensure state updates
+                    setTimeout(() => calculatePrice(), 100);
+                  }}
                 />
-                Makan Tengahari
+                Makan Tengahari (RM10.00 per pax)
               </label>
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
                   {...register('food.dinner')}
                   className="mr-2"
+                  onChange={(e) => {
+                    setValue('food.dinner', e.target.checked);
+                    // Trigger price calculation after a short delay to ensure state updates
+                    setTimeout(() => calculatePrice(), 100);
+                  }}
                 />
-                Makan Petang
+                Makan Petang (RM10.00 per pax)
               </label>
               <label className="inline-flex items-center">
                 <input
                   type="checkbox"
                   {...register('food.supper')}
                   className="mr-2"
+                  onChange={(e) => {
+                    setValue('food.supper', e.target.checked);
+                    // Trigger price calculation after a short delay to ensure state updates
+                    setTimeout(() => calculatePrice(), 100);
+                  }}
                 />
-                Makan Malam
+                Makan Malam (RM10.00 per pax)
               </label>
             </div>
+
+            {/* Food Cost Summary */}
+            {bilanganKehadiran > 0 && foodOptions && (foodOptions.breakfast || foodOptions.lunch || foodOptions.dinner || foodOptions.supper) && (
+              <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <h4 className="text-sm font-medium text-orange-800 mb-2">
+                  🍽️ Makanan Dipilih
+                </h4>
+                <div className="space-y-1">
+                  {foodOptions.breakfast && (
+                    <div className="text-sm text-orange-700 flex justify-between">
+                      <span>Makan Pagi ({bilanganKehadiran} pax)</span>
+                      <span>RM{(bilanganKehadiran * 10).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {foodOptions.lunch && (
+                    <div className="text-sm text-orange-700 flex justify-between">
+                      <span>Makan Tengahari ({bilanganKehadiran} pax)</span>
+                      <span>RM{(bilanganKehadiran * 10).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {foodOptions.dinner && (
+                    <div className="text-sm text-orange-700 flex justify-between">
+                      <span>Makan Petang ({bilanganKehadiran} pax)</span>
+                      <span>RM{(bilanganKehadiran * 10).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {foodOptions.supper && (
+                    <div className="text-sm text-orange-700 flex justify-between">
+                      <span>Makan Malam ({bilanganKehadiran} pax)</span>
+                      <span>RM{(bilanganKehadiran * 10).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-orange-200 mt-2 pt-2">
+                  <div className="text-sm font-semibold text-orange-800 flex justify-between">
+                    <span>Jumlah Makanan:</span>
+                    <span>RM{(() => {
+                      let totalFoodCost = 0;
+                      if (foodOptions.breakfast) totalFoodCost += bilanganKehadiran * 10;
+                      if (foodOptions.lunch) totalFoodCost += bilanganKehadiran * 10;
+                      if (foodOptions.dinner) totalFoodCost += bilanganKehadiran * 10;
+                      if (foodOptions.supper) totalFoodCost += bilanganKehadiran * 10;
+                      return totalFoodCost.toFixed(2);
+                    })()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block mb-1">Air Mineral (RM1.00/botol)</label>
@@ -1705,7 +1827,8 @@ const memoizedExistingBookings = useMemo(() => {
         {(totalPrice > 0 || 
           (startTimeForm && endTime && facilityData) || 
           (peralatanTambahan && Object.keys(peralatanTambahan).some(key => peralatanTambahan[key])) ||
-          mineralWater > 0) && (
+          mineralWater > 0 ||
+          (bilanganKehadiran > 0 && foodOptions && (foodOptions.breakfast || foodOptions.lunch || foodOptions.dinner || foodOptions.supper))) && (
                 <div className="mt-6 p-0 bg-card rounded-lg border border-border overflow-hidden">
                   <div className="bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4">
                     <h3 className="font-semibold text-lg flex items-center">
@@ -1754,6 +1877,19 @@ const memoizedExistingBookings = useMemo(() => {
                             // Add water cost
                             if (mineralWater > 0) {
                               calculatedTotal += mineralWater * 1.00;
+                            }
+                            
+                            // Add food cost
+                            if (bilanganKehadiran > 0 && foodOptions) {
+                              let foodCount = 0;
+                              if (foodOptions.breakfast) foodCount++;
+                              if (foodOptions.lunch) foodCount++;
+                              if (foodOptions.dinner) foodCount++;
+                              if (foodOptions.supper) foodCount++;
+                              
+                              if (foodCount > 0) {
+                                calculatedTotal += bilanganKehadiran * 10 * foodCount; // RM10 per pax per food option
+                              }
                             }
                             
                             return calculatedTotal.toFixed(2);
@@ -1851,6 +1987,25 @@ const memoizedExistingBookings = useMemo(() => {
                           );
                         }
                         
+                        // Add food cost breakdown
+                        if (bilanganKehadiran > 0 && foodOptions) {
+                          const selectedFoodItems = [];
+                          if (foodOptions.breakfast) selectedFoodItems.push('Makan Pagi');
+                          if (foodOptions.lunch) selectedFoodItems.push('Makan Tengahari');
+                          if (foodOptions.dinner) selectedFoodItems.push('Makan Petang');
+                          if (foodOptions.supper) selectedFoodItems.push('Makan Malam');
+                          
+                          if (selectedFoodItems.length > 0) {
+                            const totalFoodCost = bilanganKehadiran * 10 * selectedFoodItems.length;
+                            breakdownItems.push(
+                              <div key="food" className="flex justify-between text-sm py-1">
+                                <span className="text-gray-600">Makanan ({selectedFoodItems.join(', ')}) - {bilanganKehadiran} pax</span>
+                                <span className="font-medium text-gray-900">RM{totalFoodCost.toFixed(2)}</span>
+                              </div>
+                            );
+                          }
+                        }
+                        
                         if (breakdownItems.length > 0) {
                           return breakdownItems;
                         }
@@ -1865,9 +2020,23 @@ const memoizedExistingBookings = useMemo(() => {
                     </div>
 
                     <div className="bg-blue-50 rounded-lg p-3">
-                     
+                      <p className="text-xs text-blue-700">
+                        <strong>Makanan dan Minuman:</strong>
+                      </p>
                       <p className="mt-1 text-xs text-blue-700">
-                        *Tidak termasuk harga makanan dan minuman (jika berkenaan)
+                        • Makan Pagi: RM10.00 per pax {foodOptions?.breakfast ? '(Dipilih)' : '(Tidak dipilih)'}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        • Makan Tengahari: RM10.00 per pax {foodOptions?.lunch ? '(Dipilih)' : '(Tidak dipilih)'}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        • Makan Petang: RM10.00 per pax {foodOptions?.dinner ? '(Dipilih)' : '(Tidak dipilih)'}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        • Makan Malam: RM10.00 per pax {foodOptions?.supper ? '(Dipilih)' : '(Tidak dipilih)'}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        • Air Mineral: RM1.00 per botol
                       </p>
                     </div>
                   </div>

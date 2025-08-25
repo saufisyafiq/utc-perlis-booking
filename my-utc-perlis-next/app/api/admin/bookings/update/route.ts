@@ -6,12 +6,13 @@ interface UpdateBookingRequest {
   statusReason?: string;
   processedAt?: string;
   totalPrice?: number;
+  paymentStatus?: string;
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const body: UpdateBookingRequest = await request.json();
-    const { documentId, bookingStatus, statusReason, processedAt, totalPrice } = body;
+    const { documentId, bookingStatus, statusReason, processedAt, totalPrice, paymentStatus } = body;
 
     // Validate required fields
     if (!documentId || !bookingStatus) {
@@ -21,7 +22,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.log('Admin updating booking:', documentId, 'to', bookingStatus, totalPrice ? `with new price: ${totalPrice}` : '');
+    console.log('Admin updating booking:', documentId, 'to', bookingStatus, totalPrice ? `with new price: ${totalPrice}` : '', paymentStatus ? `with payment status: ${paymentStatus}` : '');
 
     // Prepare update data
     const updateData: {
@@ -29,6 +30,7 @@ export async function PUT(request: NextRequest) {
       statusReason?: string | null;
       processedAt: string;
       totalPrice?: number;
+      paymentStatus?: string;
     } = {
       bookingStatus,
       statusReason: statusReason || null,
@@ -37,6 +39,10 @@ export async function PUT(request: NextRequest) {
 
     if (totalPrice !== undefined) {
       updateData.totalPrice = totalPrice;
+    }
+
+    if (paymentStatus !== undefined) {
+      updateData.paymentStatus = paymentStatus;
     }
 
     // Use server-side API token to update via Strapi REST API

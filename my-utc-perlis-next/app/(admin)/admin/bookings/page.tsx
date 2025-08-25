@@ -282,17 +282,30 @@ export default function BookingManagement() {
       
       console.log('Updating booking:', bookingId, 'to', status);
       
+      const updatePayload: {
+        documentId: string;
+        bookingStatus: string;
+        statusReason?: string;
+        processedAt: string;
+        paymentStatus?: string;
+      } = {
+        documentId: bookingId,
+        bookingStatus: status,
+        statusReason: reason,
+        processedAt: new Date().toISOString(),
+      };
+
+      // When approving a booking, also set payment status to VERIFIED
+      if (status === 'APPROVED') {
+        updatePayload.paymentStatus = 'VERIFIED';
+      }
+      
       const response = await fetch('/api/admin/bookings/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          documentId: bookingId,
-          bookingStatus: status,
-          statusReason: reason,
-          processedAt: new Date().toISOString(),
-        }),
+        body: JSON.stringify(updatePayload),
       });
       
       console.log('Response status:', response.status);
