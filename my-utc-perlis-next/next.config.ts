@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployment
   output: 'standalone',
   
+  // Environment variables (fallback if not set in environment)
+  env: {
+    NEXT_PUBLIC_STRAPI_API_URL: process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://yogkw4gowc4k88owkkcksscw.168.231.119.113.sslip.io',
+  },
+  
   images: {
     remotePatterns: [
       {

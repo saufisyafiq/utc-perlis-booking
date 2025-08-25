@@ -8,6 +8,7 @@ import Image from 'next/image';
 import AvailabilityCalendar from '../components/AvailabilityCalendar';
 import SimpleBookingSelector from '../components/SimpleBookingSelector';
 import { SimpleBookingLogic } from '../lib/simple-booking-logic';
+import { getStrapiApiUrl, buildStrapiUrl, buildStrapiMediaUrl, validateConfig } from '../../lib/config';
 
 interface BookingFormData {
   applicantName: string;
@@ -115,11 +116,27 @@ function BookingFormContent() {
   useEffect(() => {
     const fetchFacility = async () => {
       if (!facilityId) return;
+      
+      // Validate configuration first
+      const configValidation = validateConfig();
+      if (!configValidation.isValid) {
+        console.error('❌ Configuration validation failed:', configValidation.errors);
+        setSubmitError('Configuration error: Unable to connect to server. Please contact administrator.');
+        return;
+      }
+      
+      // Build API URL using helper
+      const apiUrl = buildStrapiUrl(`api/facilities?filters[documentId][$eq]=${facilityId}&populate=*`);
+      if (!apiUrl) {
+        console.error('❌ Unable to build API URL - Strapi API URL not configured');
+        setSubmitError('Configuration error: Unable to connect to server. Please contact administrator.');
+        return;
+      }
+      
       try {
-        // For debugging - log the fetch URL
-        console.log(`Fetching from: ${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/facilities?filters[documentId][$eq]=${facilityId}&populate=*`);
+        console.log(`Fetching from: ${apiUrl}`);
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/facilities?filters[documentId][$eq]=${facilityId}&populate=*`, {
+        const res = await fetch(apiUrl, {
           cache: 'no-store'
         });
         
@@ -135,6 +152,7 @@ function BookingFormContent() {
         }
       } catch (error) {
         console.error('Error fetching facility:', error);
+        setSubmitError('Unable to load facility data. Please try again later.');
       }
     };
     fetchFacility();
@@ -752,12 +770,19 @@ const memoizedExistingBookings = useMemo(() => {
   useEffect(() => {
     if (facilityData?.image && facilityData.image.length > 0) {
       console.log('Image data:', facilityData.image[0]);
-      console.log('Image URL:', `${process.env.NEXT_PUBLIC_STRAPI_API_URL}${
+      
+      const imageUrl = buildStrapiMediaUrl(
         facilityData.image[0].formats?.medium?.url || 
         facilityData.image[0].formats?.small?.url || 
         facilityData.image[0].formats?.thumbnail?.url || 
         facilityData.image[0].url
-      }`);
+      );
+      
+      if (imageUrl) {
+        console.log('Image URL:', imageUrl);
+      } else {
+        console.error('❌ Cannot build image URL: Strapi API URL not configured');
+      }
     }
   }, [facilityData]);
 
@@ -965,25 +990,33 @@ const memoizedExistingBookings = useMemo(() => {
                 </div>
               </div>
             </div>
-            {facilityData.image && facilityData.image.length > 0 && (
-              <div className="md:w-1/3 relative">
-                <Image 
-                  src={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${
-                    facilityData.image[0].formats?.medium?.url || 
-                    facilityData.image[0].formats?.small?.url || 
-                    facilityData.image[0].formats?.thumbnail?.url || 
-                    facilityData.image[0].url
-                  }`} 
-                  alt={facilityData.name} 
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                <div className="absolute bottom-0 right-0 bg-blue-500 text-white px-4 py-2 text-sm font-semibold">
-                  Tempahan Baru
+            {(() => {
+              if (!facilityData.image || facilityData.image.length === 0) return null;
+              
+              const imageUrl = buildStrapiMediaUrl(
+                facilityData.image[0].formats?.medium?.url || 
+                facilityData.image[0].formats?.small?.url || 
+                facilityData.image[0].formats?.thumbnail?.url || 
+                facilityData.image[0].url
+              );
+              
+              if (!imageUrl) return null;
+              
+              return (
+                <div className="md:w-1/3 relative">
+                  <Image 
+                    src={imageUrl} 
+                    alt={facilityData.name} 
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                  <div className="absolute bottom-0 right-0 bg-blue-500 text-white px-4 py-2 text-sm font-semibold">
+                    Tempahan Baru
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
