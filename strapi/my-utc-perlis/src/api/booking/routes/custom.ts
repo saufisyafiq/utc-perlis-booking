@@ -23,6 +23,15 @@ module.exports = {
         middlewares: [],
       },
     },
+    {
+      method: 'POST',
+      path: '/booking/payment-upload',
+      handler: 'api::booking.booking.uploadPaymentProof',
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
 
     // You can add other custom booking routes here
   ],

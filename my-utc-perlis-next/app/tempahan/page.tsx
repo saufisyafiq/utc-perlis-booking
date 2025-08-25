@@ -383,8 +383,23 @@ const memoizedExistingBookings = useMemo(() => {
       setValue('packageType', 'MULTI_DAY');
       setStartTime('08:00');
       setSelectedDuration(14); // 14 hours per day
+      
+      // Set booking data for multi-day bookings
+      const multiDayBookingData = {
+        startDate: format(selectedDate, 'yyyy-MM-dd'),
+        endDate: format(selectedEndDate, 'yyyy-MM-dd'),
+        startTime: '08:00',
+        endTime: '22:00',
+        attendance: bilanganKehadiran || 1,
+        facilityCapacity: facilityData?.capacity || 100,
+        isValid: true,
+        price: 0, // Will be calculated by pricing engine
+        packageType: 'MULTI_DAY'
+      };
+      setBookingData(multiDayBookingData);
+      console.log('Multi-day booking data set:', multiDayBookingData);
     }
-  }, [selectedDate, selectedEndDate, setValue]);
+  }, [selectedDate, selectedEndDate, setValue, bilanganKehadiran, facilityData?.capacity]);
 
   // Helper function to determine if a section is complete
   const isSectionComplete = (section: number): boolean => {
@@ -485,9 +500,29 @@ const memoizedExistingBookings = useMemo(() => {
     // Validate that we have booking data from the selector
     if (!bookingData || !bookingData.isValid) {
       console.log('Invalid booking data:', bookingData);
-      setSubmitError('Sila pilih masa tempahan yang sah');
-      setActiveStep(2); // Navigate to booking step
-      return;
+      
+      // For single-day bookings, check if user has selected date and time manually
+      if (selectedDate && !selectedEndDate && startTimeForm && endTime && bilanganKehadiran) {
+        console.log('Creating fallback booking data for single-day booking');
+        const fallbackBookingData = {
+          startDate: format(selectedDate, 'yyyy-MM-dd'),
+          endDate: format(selectedDate, 'yyyy-MM-dd'),
+          startTime: startTimeForm,
+          endTime: endTime,
+          attendance: bilanganKehadiran,
+          facilityCapacity: facilityData?.capacity || 100,
+          isValid: true,
+          price: totalPrice || 0,
+          packageType: 'PER_JAM' // Default to hourly
+        };
+        setBookingData(fallbackBookingData);
+        console.log('Fallback booking data set:', fallbackBookingData);
+        // Continue with submission
+      } else {
+        setSubmitError('Sila pilih masa tempahan yang sah');
+        setActiveStep(2); // Navigate to booking step
+        return;
+      }
     }
     
     // Additional validation: Check if selected dates are available
@@ -628,6 +663,12 @@ const memoizedExistingBookings = useMemo(() => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Booking creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          sentData: strapiBookingData
+        });
         throw new Error(errorData.message || errorData.error || 'Failed to submit booking');
       }
 
@@ -643,7 +684,7 @@ const memoizedExistingBookings = useMemo(() => {
         setSubmitSuccessMessage(successMessage);
         setSubmitError(''); // Clear any previous errors
         
-        // Prepare success page URL with booking details
+        // Prepare success page URL with booking details - redirect to payment flow
         const successParams = new URLSearchParams({
           bookingNumber: result.bookingNumber || 'N/A',
           name: data.applicantName,
@@ -654,7 +695,8 @@ const memoizedExistingBookings = useMemo(() => {
           endDate: bookingData.endDate,
           startTime: bookingData.startTime,
           endTime: bookingData.endTime,
-          totalPrice: frontendTotalPrice.toString()
+          totalPrice: frontendTotalPrice.toString(),
+          paymentFlow: 'true'
         });
         
         // Reset form after successful submission and redirect with details

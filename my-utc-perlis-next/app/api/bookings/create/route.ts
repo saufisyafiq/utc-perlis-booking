@@ -244,137 +244,174 @@ const uploadFiles = async (files: File[]): Promise<number[]> => {
   return uploadedFileIds;
 };
 
-const sendBookingConfirmationEmail = async (data: CreateBookingRequest, bookingNumber: string, facility: any, totalPrice: number): Promise<void> => {
+const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingNumber: string, facility: any, totalPrice: number): Promise<void> => {
   try {
-    const emailService = getEmailService();
-    
-    // Format date and time for display
-    const startDate = new Date(data.startDate).toLocaleDateString('ms-MY', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    // Create payment upload link
+    const paymentUploadLink = `${process.env.NEXT_PUBLIC_SITE_URL}/tempahan/status?booking=${bookingNumber}&email=${encodeURIComponent(data.email)}`;
+
+    // Format date for display
+    const formattedDate = new Date(data.startDate).toLocaleDateString('ms-MY', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-    const endDate = new Date(data.endDate).toLocaleDateString('ms-MY', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-    
-    const emailHtml = `
+
+    // Email template for payment notification (reusing existing payment approval template)
+    const emailHTML = `
       <!DOCTYPE html>
       <html lang="ms">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pengesahan Tempahan - UTC Perlis</title>
+        <title>Tempahan Diluluskan - Sila Buat Pembayaran - UTC Perlis</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; }
+          .success-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+          .booking-details { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+          .payment-info { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+          .payment-button { display: inline-block; background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 15px 0; }
+          .important-note { background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+          .footer { background: #6c757d; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 14px; }
+          .bank-details { background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        </style>
       </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="margin: 0; font-size: 28px;">🏢 UTC Perlis</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Pengesahan Tempahan Fasiliti</p>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef;">
-          <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-            <h2 style="color: #155724; margin: 0 0 10px 0; font-size: 20px;">✅ Tempahan Anda Telah Diterima</h2>
-            <p style="color: #155724; margin: 0; font-size: 16px;">
-              Terima kasih! Permohonan tempahan anda telah berjaya dihantar dan sedang menunggu kelulusan pihak pengurusan.
-            </p>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🏢 UTC Perlis</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Tempahan Diluluskan - Sila Buat Pembayaran</p>
           </div>
           
-          <div style="background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <h3 style="color: #495057; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">📋 Maklumat Tempahan</h3>
+          <div class="content">
+            <div class="success-box">
+              <h2 style="color: #155724; margin: 0 0 10px 0; font-size: 20px;">🎉 Tempahan Anda Telah Diluluskan!</h2>
+              <p style="color: #155724; margin: 0; font-size: 16px;">
+                Tahniah! Permohonan tempahan anda telah diluluskan. Sila buat pembayaran untuk mengesahkan tempahan anda.
+              </p>
+            </div>
             
-            <div style="display: grid; gap: 15px;">
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>No. Tempahan:</strong>
-                <span style="color: #0066cc; font-weight: bold;">${bookingNumber}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Nama Pemohon:</strong>
-                <span>${data.applicantName}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Jabatan:</strong>
-                <span>${data.department}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Fasiliti:</strong>
-                <span>${facility.name}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Tujuan:</strong>
-                <span>${data.purpose}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Nama Acara:</strong>
-                <span>${data.eventName}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Tarikh Mula:</strong>
-                <span>${startDate}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Tarikh Tamat:</strong>
-                <span>${endDate}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Masa:</strong>
-                <span>${data.startTime} - ${data.endTime}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
-                <strong>Bilangan Kehadiran:</strong>
-                <span>${data.attendance} orang</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 18px; font-weight: bold; color: #28a745;">
-                <strong>Jumlah Harga:</strong>
-                <span>RM ${totalPrice.toFixed(2)}</span>
+            <div class="booking-details">
+              <h3 style="color: #495057; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">📋 Maklumat Tempahan</h3>
+              
+              <div style="display: grid; gap: 15px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>No. Tempahan:</strong>
+                  <span style="color: #0066cc; font-weight: bold;">${bookingNumber}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>Nama:</strong>
+                  <span>${data.applicantName}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>Fasiliti:</strong>
+                  <span>${facility.name}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>Acara:</strong>
+                  <span>${data.eventName}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>Tarikh:</strong>
+                  <span>${formattedDate}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f3f4;">
+                  <strong>Masa:</strong>
+                  <span>${data.startTime} - ${data.endTime}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 18px; font-weight: bold; color: #dc3545;">
+                  <strong>Jumlah Bayaran:</strong>
+                  <span>RM ${totalPrice.toFixed(2)}</span>
+                </div>
               </div>
             </div>
+            
+            <div class="bank-details">
+              <h3 style="color: #004085; margin: 0 0 15px 0; font-size: 18px;">🏦 Maklumat Bank untuk Pembayaran</h3>
+              <div style="color: #004085;">
+                <p style="margin: 5px 0;"><strong>Nama Bank:</strong> Bank Islam Malaysia Berhad</p>
+                <p style="margin: 5px 0;"><strong>No. Akaun:</strong> 12345678901</p>
+                <p style="margin: 5px 0;"><strong>Nama Pemegang Akaun:</strong> UTC Perlis</p>
+                <p style="margin: 5px 0;"><strong>Jenis Akaun:</strong> Akaun Semasa</p>
+              </div>
+            </div>
+
+            <div class="payment-info">
+              <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">💳 Cara Pembayaran</h3>
+              <ol style="color: #856404; margin: 10px 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Buat pembayaran sebanyak <strong>RM ${totalPrice.toFixed(2)}</strong> ke akaun bank di atas</li>
+                <li style="margin-bottom: 8px;">Simpan resit pembayaran (online banking/slip bank)</li>
+                <li style="margin-bottom: 8px;">Muat naik bukti pembayaran melalui pautan di bawah</li>
+                <li style="margin-bottom: 8px;">Tunggu pengesahan dari pihak pengurusan</li>
+              </ol>
+              
+              <div style="text-align: center; margin: 20px 0;">
+                <a href="${paymentUploadLink}" class="payment-button">
+                  📤 Muat Naik Bukti Pembayaran
+                </a>
+              </div>
+            </div>
+
+            <div class="important-note">
+              <h4 style="margin-top: 0;">⚠️ Penting:</h4>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Sila buat pembayaran dalam tempoh <strong>7 hari</strong> dari tarikh email ini</li>
+                <li>Muat naik bukti pembayaran yang jelas dan lengkap</li>
+                <li>Tempahan akan dibatalkan jika pembayaran tidak dibuat dalam tempoh yang ditetapkan</li>
+                <li>Untuk sebarang pertanyaan, sila hubungi kami di <strong>010-510 5130</strong></li>
+              </ul>
+            </div>
+
+            <p>Terima kasih atas pemilihan anda terhadap fasiliti UTC Perlis.</p>
+            
+            <p>Sekian, terima kasih.</p>
+            
+            <div class="footer">
+              <p><strong>Pusat Transformasi Bandar (UTC) Perlis,</strong><br>
+              Jalan Seri Sena, 01000 Kangar Perlis.<br>
+              Tel: 010-510 5130 | Email: utcperlis09@gmail.com</p>
+            </div>
           </div>
-          
-          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-            <h3 style="color: #856404; margin: 0 0 10px 0; font-size: 16px;">⏳ Langkah Seterusnya</h3>
-            <ol style="color: #856404; margin: 10px 0; padding-left: 20px;">
-              <li style="margin-bottom: 8px;">Permohonan anda sedang dalam proses semakan oleh pihak pengurusan</li>
-              <li style="margin-bottom: 8px;">Anda akan menerima notifikasi email apabila tempahan diluluskan atau ditolak</li>
-              <li style="margin-bottom: 8px;">Sekiranya diluluskan, sila buat pembayaran mengikut arahan yang akan diberikan</li>
-            </ol>
-          </div>
-          
-          <div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px;">
-            <h3 style="color: #004085; margin: 0 0 10px 0; font-size: 16px;">📞 Hubungi Kami</h3>
-            <p style="color: #004085; margin: 5px 0;">
-              Sekiranya anda mempunyai sebarang pertanyaan, sila hubungi kami di:
-            </p>
-            <p style="color: #004085; margin: 5px 0;">
-              📧 Email: utcperlis09@gmail.com<br>
-              📞 Telefon: +604-9705310
-            </p>
-          </div>
-        </div>
-        
-        <div style="background: #6c757d; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; font-size: 14px;">
-          <p style="margin: 0;">
-            Email ini dijana secara automatik. Sila jangan balas email ini.<br>
-            © 2024 UTC Perlis. Hak cipta terpelihara.
-          </p>
         </div>
       </body>
       </html>
     `;
 
-    await emailService.sendEmail({
-      to: data.email,
-      subject: `Pengesahan Tempahan - ${bookingNumber} - UTC Perlis`,
-      html: emailHtml
-    });
+    // Send email directly using nodemailer
+    try {
+      const nodemailer = await import('nodemailer');
+      
+      const config = {
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      };
 
-    console.log(`✅ Booking confirmation email sent to ${data.email}`);
+      const transporter = nodemailer.createTransport(config);
+      const fromAddress = `${process.env.FROM_NAME || 'UTC Perlis'} <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`;
+
+      await transporter.sendMail({
+        from: fromAddress,
+        to: data.email,
+        subject: `Tempahan Diluluskan - Sila Buat Pembayaran #${bookingNumber}`,
+        html: emailHTML,
+      });
+      
+      console.log('✅ Payment notification email sent successfully to:', data.email);
+    } catch (emailError) {
+      console.error('❌ Failed to send payment notification email:', emailError);
+      // Continue execution even if email fails
+    }
+
   } catch (error) {
-    console.error('❌ Failed to send booking confirmation email:', error);
+    console.error('❌ Failed to send payment notification email:', error);
     // Don't throw error - email failure shouldn't prevent booking creation
   }
 };
@@ -404,7 +441,7 @@ const createBookingRecord = async (data: CreateBookingRequest, facilityNumericId
       additionalEquipment: data.rental.additionalEquipment || {}
     },
     meal: data.food || {},
-    bookingStatus: 'PENDING',
+    bookingStatus: 'AWAITING PAYMENT',
     paymentStatus: 'UNPAID',
     sessionId: data.sessionId,
     dokumen_berkaitan: fileIds, // Add file references
@@ -445,6 +482,7 @@ export async function POST(request: NextRequest) {
       }
 
       const body = JSON.parse(dataString);
+      console.log('📥 Received booking data:', body);
       validatedData = CreateBookingSchema.parse(body);
 
       // Extract files
@@ -495,8 +533,8 @@ export async function POST(request: NextRequest) {
     // Create booking record with file references
     const result = await createBookingRecord(validatedData, facility.id, totalPrice, uploadedFileIds);
 
-    // Send confirmation email to the user
-    await sendBookingConfirmationEmail(validatedData, result.bookingNumber, facility, totalPrice);
+    // Send payment notification email to the user (new flow)
+    await sendPaymentNotificationEmail(validatedData, result.bookingNumber, facility, totalPrice);
 
     // Release any temporary holds for this session
     try {
@@ -526,6 +564,7 @@ export async function POST(request: NextRequest) {
     console.error('Booking creation error:', error);
 
     if (error instanceof z.ZodError) {
+      console.error('❌ Validation errors:', error.errors);
       return NextResponse.json({
         success: false,
         error: 'VALIDATION_ERROR',

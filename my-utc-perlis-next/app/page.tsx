@@ -58,7 +58,7 @@ export default async function Home() {
       <main>
         {/* Feature Cards */}
         <div className="max-w-7xl mx-auto px-4 lg:-mt-28 relative z-20">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 pt-8 lg:pt-0">
+          <div className="grid grid-cols-2 gap-4 sm:gap-8 pt-8 lg:pt-0">
             <FeatureCard 
               title="Fasiliti"
               description="Lihat Senarai Fasiliti yang tersedia di UTC Perlis"
@@ -71,7 +71,7 @@ export default async function Home() {
               icon="/services.svg"
               href="/services"
             />
-            <FeatureCard 
+            {/* <FeatureCard 
               title="Bisnes"
               description="22 Directory"
               icon="/stall.svg"
@@ -82,7 +82,7 @@ export default async function Home() {
               description="22 Directory"
               icon="/announcement.svg"
               href="/hebahan"
-            />
+            /> */}
           </div>
         </div>
 

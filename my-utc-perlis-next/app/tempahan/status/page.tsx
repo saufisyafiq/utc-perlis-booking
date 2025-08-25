@@ -41,6 +41,9 @@ function BookingStatusContent() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  
+  // QR code modal state
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Auto-populate from URL params
   useEffect(() => {
@@ -59,6 +62,20 @@ function BookingStatusContent() {
       handleAutoSearch(decodeURIComponent(emailParam), bookingParam);
     }
   }, [searchParams]);
+
+  // Handle escape key to close QR modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showQRModal) {
+        setShowQRModal(false);
+      }
+    };
+
+    if (showQRModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showQRModal]);
 
   const handleAutoSearch = async (emailValue: string, bookingValue: string) => {
     setLoading(true);
@@ -489,13 +506,26 @@ function BookingStatusContent() {
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-blue-800 mb-2">Kod QR untuk Pembayaran:</p>
-                    <Image
-                      fill
-                      src="/qr.png" 
-                      alt="QR Code untuk Pembayaran" 
-                      className="max-w-40 h-auto border-2 border-blue-300 rounded-lg mx-auto"
-                    />
-                    <p className="text-xs text-blue-600 mt-2">Imbas kod QR untuk pembayaran pantas</p>
+                    <div className="flex justify-center">
+                      <div 
+                        className="cursor-pointer transition-transform hover:scale-105"
+                        onClick={() => setShowQRModal(true)}
+                        title="Klik untuk melihat QR kod yang lebih besar"
+                      >
+                        <Image
+                          width={160}
+                          height={160}
+                          src="/qr.png" 
+                          alt="QR Code untuk Pembayaran" 
+                          className="border-2 border-blue-300 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Imbas kod QR untuk pembayaran pantas
+                      <br />
+                      <span className="text-blue-500 underline cursor-pointer">Klik untuk melihat saiz yang lebih besar</span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -643,7 +673,7 @@ function BookingStatusContent() {
           </p>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             <a
-              href="tel:04-XXX-XXXX"
+              href="tel:04-9705310"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -652,7 +682,7 @@ function BookingStatusContent() {
               Hubungi Telefon
             </a>
             <a
-              href="mailto:admin@utcperlis.edu.my"
+              href="mailto:utcperlis09@gmail.com"
               className="inline-flex items-center px-4 py-2 bg-background text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,6 +692,66 @@ function BookingStatusContent() {
             </a>
           </div>
         </div>
+
+        {/* QR Code Modal */}
+        {showQRModal && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowQRModal(false)}
+          >
+            <div 
+              className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Kod QR Pembayaran</h3>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <Image
+                    width={280}
+                    height={280}
+                    src="/qr.png" 
+                    alt="QR Code untuk Pembayaran - Saiz Besar" 
+                    className="border-2 border-blue-300 rounded-lg"
+                  />
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">Maklumat Pembayaran</h4>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p><strong>Bank:</strong> CIMB Bank</p>
+                    <p><strong>No. Akaun:</strong> 8006326050</p>
+                    <p><strong>Nama:</strong> Perbadanan Kemajuan Ekonomi Negeri Perlis</p>
+                    {booking && (
+                      <p><strong>Jumlah:</strong> <span className="text-lg font-bold text-green-600">RM {booking.totalPrice?.toFixed(2) || '0.00'}</span></p>
+                    )}
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4">
+                  Imbas kod QR ini dengan aplikasi perbankan anda untuk membuat pembayaran dengan mudah.
+                </p>
+                
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -563,7 +563,7 @@ export default function BookingManagement() {
           <p className="text-muted-foreground">Urus dan pantau semua tempahan fasiliti</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={testAPIConnection} className="text-foreground">
+          {/* <Button variant="outline" size="sm" onClick={testAPIConnection} className="text-foreground">
             🔍 Test API
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowEmailTestDialog(true)} className="text-foreground">
@@ -572,7 +572,7 @@ export default function BookingManagement() {
           <Button variant="outline" size="sm" className="text-foreground">
             <DownloadIcon className="h-4 w-4 mr-2" />
             Export Data
-          </Button>
+          </Button> */}
         </div>
       </div>
 

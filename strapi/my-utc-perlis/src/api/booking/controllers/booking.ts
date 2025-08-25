@@ -446,6 +446,83 @@ module.exports = createCoreController('api::booking.booking', ({ strapi }: { str
       console.error('[ERROR] Error getting availability:', error);
       return ctx.internalServerError('An error occurred while fetching availability');
     }
+  },
+
+  /**
+   * Upload payment proof for a booking
+   * @param {StrapiContext} ctx - Strapi context
+   * @returns {Object} Updated booking data
+   */
+  async uploadPaymentProof(ctx: StrapiContext) {
+    try {
+      const { bookingId, email } = ctx.request.body;
+      
+      console.log('[DEBUG] Payment proof upload request:', { bookingId, email });
+      
+      if (!bookingId || !email) {
+        return ctx.badRequest('Booking ID and email are required');
+      }
+
+      // Find the booking by booking number first, then try by ID if needed
+      let booking = await strapi.documents('api::booking.booking').findFirst({
+        filters: {
+          $and: [
+            { bookingNumber: { $eq: bookingId } },
+            { email: { $eq: email } }
+          ]
+        },
+        status: 'published'
+      });
+
+      // If not found by booking number and bookingId looks like a numeric ID, try searching by ID
+      if (!booking && /^\d+$/.test(bookingId)) {
+        booking = await strapi.documents('api::booking.booking').findFirst({
+          filters: {
+            $and: [
+              { id: { $eq: parseInt(bookingId) } },
+              { email: { $eq: email } }
+            ]
+          },
+          status: 'published'
+        });
+      }
+
+      if (!booking) {
+        return ctx.notFound('Booking not found or email does not match');
+      }
+
+      console.log('[DEBUG] Found booking:', booking.documentId, booking.bookingStatus);
+
+      // Check if booking is in correct status for payment upload
+      if (booking.bookingStatus !== 'AWAITING PAYMENT' && booking.bookingStatus !== 'AWAITING_PAYMENT') {
+        return ctx.badRequest('Booking is not in awaiting payment status');
+      }
+
+      // Update booking status to REVIEW PAYMENT and ensure it remains published
+      const updatedBooking = await strapi.documents('api::booking.booking').update({
+        documentId: booking.documentId,
+        data: {
+          bookingStatus: 'REVIEW PAYMENT',
+          processedAt: new Date().toISOString(),
+        },
+        status: 'published'
+      });
+
+      console.log('[DEBUG] Updated booking status to REVIEW PAYMENT');
+
+      return {
+        success: true,
+        message: 'Payment proof uploaded successfully. Your booking is now under review.',
+        data: {
+          bookingId: booking.bookingNumber || booking.id,
+          status: 'REVIEW PAYMENT'
+        }
+      };
+
+    } catch (error) {
+      console.error('[ERROR] Error uploading payment proof:', error);
+      return ctx.internalServerError('An error occurred while uploading payment proof');
+    }
   }
 }));
 

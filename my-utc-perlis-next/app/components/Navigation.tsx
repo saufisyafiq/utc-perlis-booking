@@ -60,7 +60,7 @@ const Navigation = () => {
             <div className="flex-1 flex justify-center">
               <div className="flex space-x-8 items-center">
                 <Link href="/services" className="font-medium text-white">SERVIS</Link>
-                <Link href="/hebahan" className="font-medium text-white">HEBAHAN</Link>
+                {/* <Link href="/hebahan" className="font-medium text-white">HEBAHAN</Link> */}
               </div>
             </div>
           </div>
@@ -97,9 +97,9 @@ const Navigation = () => {
               <Link href="/services" className={getLinkClasses('/services')}>
                 SERVIS
               </Link>
-              <Link href="/hebahan" className={getLinkClasses('/hebahan')}>
+              {/* <Link href="/hebahan" className={getLinkClasses('/hebahan')}>
                 HEBAHAN
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>

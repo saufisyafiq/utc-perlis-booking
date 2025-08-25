@@ -109,105 +109,53 @@ export async function POST(request: NextRequest) {
 
     console.log('[DEBUG] User uploading payment proof for booking:', bookingId);
 
-    // First, verify the booking exists and belongs to this email
+    // Use the new Strapi payment upload endpoint
     try {
-      console.log('[DEBUG] Verifying booking:', `${strapiUrl}/api/booking/all?search=${encodeURIComponent(email)}`);
+      console.log('[DEBUG] Uploading payment proof via Strapi API:', `${strapiUrl}/api/booking/payment-upload`);
       
-      const verifyResponse = await fetch(
-        `${strapiUrl}/api/booking/all?search=${encodeURIComponent(email)}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${strapiToken}`,
-          },
-        }
-      );
-
-      console.log('[DEBUG] Verify response status:', verifyResponse.status);
-
-      if (!verifyResponse.ok) {
-        const errorText = await verifyResponse.text();
-        console.error('[ERROR] Failed to verify booking:', errorText);
-        return NextResponse.json(
-          { error: 'Failed to verify booking' },
-          { status: 400 }
-        );
-      }
-
-      const bookingsData = await verifyResponse.json();
-      console.log('[DEBUG] Bookings data:', { 
-        hasData: !!bookingsData.data, 
-        count: bookingsData.data?.length || 0 
-      });
-      
-      const booking = bookingsData.data?.find((b: any) => 
-        b.bookingNumber === bookingId || b.id.toString() === bookingId || b.documentId === bookingId
-      );
-
-      console.log('[DEBUG] Found booking:', !!booking);
-
-      if (!booking) {
-        return NextResponse.json(
-          { error: 'Booking not found or email does not match' },
-          { status: 404 }
-        );
-      }
-
-      console.log('[DEBUG] Booking status:', booking.bookingStatus);
-
-      if (booking.bookingStatus !== 'AWAITING PAYMENT' && booking.bookingStatus !== 'AWAITING_PAYMENT') {
-        return NextResponse.json(
-          { error: 'Booking is not in awaiting payment status' },
-          { status: 400 }
-        );
-      }
-
-      // Update booking status to REVIEW_PAYMENT
-      const updateData: Record<string, unknown> = {
-        bookingStatus: 'REVIEW PAYMENT',
-        paymentProof: paymentProof || 'Uploaded', // Store proof reference
-        processedAt: new Date().toISOString(),
+      // Prepare the request data
+      const uploadData: Record<string, unknown> = {
+        bookingId,
+        email,
+        paymentProof: paymentProof || 'Uploaded',
       };
 
       // Add uploaded files if any
       if (uploadedFileIds.length > 0) {
-        updateData.bukti_pembayaran = uploadedFileIds;
+        uploadData.proofOfPayment = uploadedFileIds;
       }
 
-      console.log('[DEBUG] Updating booking:', booking.documentId, updateData);
-
-      const updateResponse = await fetch(
-        `${strapiUrl}/api/bookings/${booking.documentId}`,
+      const uploadResponse = await fetch(
+        `${strapiUrl}/api/booking/payment-upload`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${strapiToken}`,
           },
-          body: JSON.stringify({
-            data: updateData
-          }),
+          body: JSON.stringify(uploadData),
         }
       );
 
-      console.log('[DEBUG] Update response status:', updateResponse.status);
+      console.log('[DEBUG] Upload response status:', uploadResponse.status);
 
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.text();
-        console.error('[ERROR] Failed to update booking status:', errorData);
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        console.error('[ERROR] Failed to upload payment proof:', errorData);
         return NextResponse.json(
-          { error: 'Failed to update booking status' },
-          { status: 500 }
+          { error: errorData.error?.message || errorData.message || 'Failed to upload payment proof' },
+          { status: uploadResponse.status }
         );
       }
 
-      const result = await updateResponse.json();
-      console.log('[DEBUG] Update result:', result);
+      const result = await uploadResponse.json();
+      console.log('[DEBUG] Upload result:', result);
 
       return NextResponse.json({
         success: true,
-        message: 'Payment proof uploaded successfully. Your booking is now under review.',
-        data: {
-          bookingId: booking.bookingNumber || booking.id,
+        message: result.message || 'Payment proof uploaded successfully. Your booking is now under review.',
+        data: result.data || {
+          bookingId,
           status: 'REVIEW PAYMENT'
         }
       });

@@ -48,9 +48,9 @@ const NavigationChild = () => {
               <Link href="/services" className={getLinkClasses('/services')}>
                 SERVIS
               </Link>
-              <Link href="/hebahan" className={getLinkClasses('/hebahan')}>
+              {/* <Link href="/hebahan" className={getLinkClasses('/hebahan')}>
                 HEBAHAN
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>

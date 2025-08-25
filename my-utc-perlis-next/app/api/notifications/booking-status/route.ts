@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       if (data.status === 'APPROVED') {
         return baseTemplate + `
           <p style="color: #28a745;">✅ Tempahan anda telah diluluskan! Sila hadir mengikut masa yang ditetapkan.</p>
-          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak pentadbiran di talian 04-XXX-XXXX.</p>
+          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak UTC Perlis di talian 04-9705310.</p>
           <p>Terima kasih kerana menggunakan sistem tempahan fasiliti UTC Perlis.</p>
         `;
       } else if (data.status === 'REJECTED') {
@@ -47,12 +47,12 @@ export async function POST(request: Request) {
           <p style="color: #dc3545;">❌ Maaf, tempahan anda telah ditolak.</p>
           ${data.reason ? `<p><strong>Sebab penolakan:</strong> ${data.reason}</p>` : ''}
           <p>Anda boleh membuat tempahan baru untuk tarikh dan masa yang lain.</p>
-          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak pentadbiran di talian 04-XXX-XXXX.</p>
+          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak UTC Perlis di talian 04-9705310.</p>
         `;
       } else {
         return baseTemplate + `
           <p>Status tempahan anda telah dikemaskini.</p>
-          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak pentadbiran.</p>
+          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak UTC Perlis di talian 04-9705310.</p>
         `;
       }
     };
