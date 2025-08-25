@@ -1,42 +1,35 @@
 /**
- * Standalone script to fix media URLs
- * Run with: node fix-urls.js
+ * Simple media URL fixer using Strapi's internal patterns
+ * Run with: node fix-media-simple.js
  */
 
 const path = require('path');
-const fs = require('fs');
 
-// Set up the environment
-process.env.NODE_ENV = process.env.NODE_ENV || 'production';
-
-async function fixMediaUrls() {
-  let strapi;
-  
+async function main() {
   try {
     console.log('🚀 Starting media URL migration...');
     
-    // Change to the correct directory
+    // Set working directory
     process.chdir(__dirname);
     
-    // Check if dist folder exists
-    if (!fs.existsSync('./dist')) {
-      console.log('⚠️ No dist folder found. Running npm run build first...');
-      const { execSync } = require('child_process');
-      execSync('npm run build', { stdio: 'inherit' });
-    }
+    // Try to require Strapi using the same pattern as strapi CLI
+    const strapi = require('@strapi/strapi');
     
-    // Import and initialize Strapi (v5 pattern)
-    const strapiFactory = require('@strapi/strapi');
+    console.log('📦 Strapi module loaded');
     
-    // Initialize Strapi instance
-    strapi = strapiFactory({
-      distDir: path.join(__dirname, 'dist'),
-      appDir: __dirname,
+    // Create app instance
+    const app = strapi({ 
+      dir: __dirname,
+      autoReload: false,
+      serveAdminPanel: false
     });
     
-    // Load Strapi
-    await strapi.load();
-    console.log('✅ Strapi initialized successfully');
+    console.log('🔧 Strapi app created');
+    
+    // Start the app
+    await app.start();
+    
+    console.log('✅ Strapi started successfully');
     
     // Get all files from the upload plugin
     const files = await strapi.db.query('plugin::upload.file').findMany({
@@ -44,11 +37,6 @@ async function fixMediaUrls() {
     });
     
     console.log(`📁 Found ${files.length} files to process`);
-    
-    if (files.length === 0) {
-      console.log('ℹ️ No files found to update');
-      return;
-    }
     
     let updatedCount = 0;
     
@@ -112,25 +100,15 @@ async function fixMediaUrls() {
     console.log(`✅ Successfully updated ${updatedCount} files`);
     console.log('🎉 Media URL migration completed!');
     
-  } catch (error) {
-    console.error('❌ Error during media URL migration:', error);
-    console.error('Stack trace:', error.stack);
-    throw error;
-  } finally {
-    if (strapi) {
-      try {
-        await strapi.destroy();
-        console.log('✅ Strapi instance closed');
-      } catch (destroyError) {
-        console.warn('⚠️ Warning: Error closing Strapi instance:', destroyError.message);
-      }
-    }
+    // Stop the app
+    await app.stop();
     process.exit(0);
+    
+  } catch (error) {
+    console.error('❌ Error during migration:', error);
+    console.error('Stack:', error.stack);
+    process.exit(1);
   }
 }
 
-// Run the migration
-fixMediaUrls().catch((error) => {
-  console.error('💥 Migration script failed:', error);
-  process.exit(1);
-});
+main();
