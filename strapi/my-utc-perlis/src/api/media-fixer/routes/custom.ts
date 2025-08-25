@@ -16,6 +16,16 @@ module.exports = {
       },
     },
     {
+      method: 'GET',
+      path: '/media-fixer/inspect',
+      handler: 'api::media-fixer.media-fixer.inspect',
+      config: {
+        policies: [],
+        middlewares: [],
+        auth: false,
+      },
+    },
+    {
       method: 'POST',
       path: '/media-fixer/fix-urls',
       handler: 'api::media-fixer.media-fixer.fixUrls',

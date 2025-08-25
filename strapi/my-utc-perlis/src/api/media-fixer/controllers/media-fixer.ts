@@ -11,6 +11,40 @@ export default {
     };
   },
 
+  async inspect(ctx) {
+    try {
+      // Get all files to inspect their current URLs
+      const files = await strapi.db.query('plugin::upload.file').findMany({
+        select: ['id', 'name', 'url', 'formats'],
+        limit: 10, // Limit to first 10 files for inspection
+      });
+
+      const inspection = files.map(file => ({
+        id: file.id,
+        name: file.name,
+        url: file.url,
+        formats: file.formats ? Object.keys(file.formats) : [],
+        formatUrls: file.formats ? Object.entries(file.formats).map(([key, data]) => ({
+          format: key,
+          url: (data as any)?.url
+        })) : []
+      }));
+
+      ctx.body = {
+        success: true,
+        totalFiles: files.length,
+        files: inspection,
+        message: 'Current media URLs inspection'
+      };
+    } catch (error: any) {
+      ctx.status = 500;
+      ctx.body = {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
   async fixUrls(ctx) {
     try {
       console.log('🚀 Starting media URL migration via API...');
