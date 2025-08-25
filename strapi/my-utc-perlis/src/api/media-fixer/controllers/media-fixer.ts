@@ -1,10 +1,8 @@
-'use strict';
-
 /**
  * media-fixer controller
  */
 
-module.exports = {
+export default {
   async test(ctx) {
     ctx.body = {
       success: true,
@@ -25,12 +23,12 @@ module.exports = {
       console.log(`📁 Found ${files.length} files to process`);
       
       let updatedCount = 0;
-      const updateLog = [];
+      const updateLog: any[] = [];
       
       for (const file of files) {
         let needsUpdate = false;
-        const updates = {};
-        const fileLog = { id: file.id, changes: [] };
+        const updates: any = {};
+        const fileLog = { id: file.id, changes: [] as any[] };
         
         // Fix main URL if it contains localhost or http://
         if (file.url && (file.url.includes('localhost') || file.url.startsWith('http://'))) {
@@ -57,8 +55,8 @@ module.exports = {
           let formatsChanged = false;
           
           for (const [formatName, formatData] of Object.entries(file.formats)) {
-            if (formatData && formatData.url && (formatData.url.includes('localhost') || formatData.url.startsWith('http://'))) {
-              let newUrl = formatData.url;
+            if (formatData && (formatData as any).url && ((formatData as any).url.includes('localhost') || (formatData as any).url.startsWith('http://'))) {
+              let newUrl = (formatData as any).url;
               if (newUrl.includes('localhost')) {
                 newUrl = newUrl.replace(/http:\/\/localhost:\d+/, 'https://strapi.utcperlis.com');
               } else if (newUrl.startsWith('http://')) {
@@ -66,17 +64,17 @@ module.exports = {
               }
               
               updatedFormats[formatName] = {
-                ...formatData,
+                ...(formatData as object),
                 url: newUrl
               };
               formatsChanged = true;
               fileLog.changes.push({
                 type: 'format_url',
                 format: formatName,
-                from: formatData.url,
+                from: (formatData as any).url,
                 to: newUrl
               });
-              console.log(`🔄 Updating ${formatName} URL: ${formatData.url} → ${newUrl}`);
+              console.log(`🔄 Updating ${formatName} URL: ${(formatData as any).url} → ${newUrl}`);
             }
           }
           
@@ -109,7 +107,7 @@ module.exports = {
         updateLog: updateLog
       };
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error during media URL migration:', error);
       
       ctx.status = 500;

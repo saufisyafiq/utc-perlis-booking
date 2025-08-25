@@ -1,9 +1,8 @@
 'use strict';
 
 /**
- * media-fixer custom routes
+ * Custom media-fixer routes
  */
-
 module.exports = {
   routes: [
     {
