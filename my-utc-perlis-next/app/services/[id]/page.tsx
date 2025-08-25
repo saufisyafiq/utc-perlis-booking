@@ -1,9 +1,9 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { FaMapMarkerAlt, FaPhone, FaGlobe, FaArrowLeft } from 'react-icons/fa';
 import { MdEmail } from 'react-icons/md';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import ServiceImage from '../../components/ServiceImage';
 
 interface Shift {
   id: number;
@@ -74,16 +74,11 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
           {/* Hero Image */}
           {service.image && service.image.length > 0 && (
             <div className="relative h-64 w-full">
-              <Image
+              <ServiceImage
                 src={`${process.env.NEXT_PUBLIC_STRAPI_API_URL}${service.image[0].url}`}
                 alt={service.name}
-                fill
                 className="object-cover rounded-t-xl"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/hero-utc.jpg'; // Fallback image
-                }}
               />
             </div>
           )}

@@ -45,7 +45,7 @@ const NavigationChild = () => {
           {/* Right side links */}
           <div className="flex-1 flex justify-center">
             <div className="flex space-x-8 items-center">
-              <Link href="/servis" className={getLinkClasses('/services')}>
+              <Link href="/services" className={getLinkClasses('/services')}>
                 SERVIS
               </Link>
               <Link href="/hebahan" className={getLinkClasses('/hebahan')}>
