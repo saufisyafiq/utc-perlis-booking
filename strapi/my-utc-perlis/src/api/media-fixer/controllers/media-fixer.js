@@ -5,6 +5,14 @@
  */
 
 module.exports = {
+  async test(ctx) {
+    ctx.body = {
+      success: true,
+      message: 'Media fixer API is working!',
+      timestamp: new Date().toISOString()
+    };
+  },
+
   async fixUrls(ctx) {
     try {
       console.log('🚀 Starting media URL migration via API...');
