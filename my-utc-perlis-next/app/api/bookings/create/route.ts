@@ -244,10 +244,10 @@ const uploadFiles = async (files: File[]): Promise<number[]> => {
   return uploadedFileIds;
 };
 
-const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingNumber: string, facility: any, totalPrice: number): Promise<void> => {
+const sendBookingConfirmationEmail = async (data: CreateBookingRequest, bookingNumber: string, facility: any, totalPrice: number): Promise<void> => {
   try {
-    // Create payment upload link
-    const paymentUploadLink = `${process.env.NEXT_PUBLIC_SITE_URL}/tempahan/status?booking=${bookingNumber}&email=${encodeURIComponent(data.email)}`;
+    // Create booking status link
+    const bookingStatusLink = `${process.env.NEXT_PUBLIC_SITE_URL}/tempahan/status?booking=${bookingNumber}&email=${encodeURIComponent(data.email)}`;
 
     // Format date for display
     const formattedDate = new Date(data.startDate).toLocaleDateString('ms-MY', {
@@ -257,14 +257,14 @@ const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingN
       day: 'numeric'
     });
 
-    // Email template for payment notification (reusing existing payment approval template)
+    // Email template for booking confirmation
     const emailHTML = `
       <!DOCTYPE html>
       <html lang="ms">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tempahan Diluluskan - Sila Buat Pembayaran - UTC Perlis</title>
+        <title>Tempahan Disahkan - UTC Perlis</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -283,14 +283,14 @@ const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingN
         <div class="container">
           <div class="header">
             <h1 style="margin: 0; font-size: 28px;">🏢 UTC Perlis</h1>
-            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Tempahan Diluluskan - Sila Buat Pembayaran</p>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Tempahan Disahkan ✅</p>
           </div>
           
           <div class="content">
             <div class="success-box">
-              <h2 style="color: #155724; margin: 0 0 10px 0; font-size: 20px;">🎉 Tempahan Anda Telah Diluluskan!</h2>
+              <h2 style="color: #155724; margin: 0 0 10px 0; font-size: 20px;">🎉 Tempahan Anda Telah Disahkan!</h2>
               <p style="color: #155724; margin: 0; font-size: 16px;">
-                Tahniah! Permohonan tempahan anda telah diluluskan. Sila buat pembayaran untuk mengesahkan tempahan anda.
+                Tahniah! Permohonan tempahan anda telah disahkan. Bukti pembayaran anda telah diterima dan sedang diproses.
               </p>
             </div>
             
@@ -329,38 +329,27 @@ const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingN
               </div>
             </div>
             
-            <div class="bank-details">
-              <h3 style="color: #004085; margin: 0 0 15px 0; font-size: 18px;">🏦 Maklumat Bank untuk Pembayaran</h3>
-              <div style="color: #004085;">
-                <p style="margin: 5px 0;"><strong>Nama Bank:</strong> Bank Islam Malaysia Berhad</p>
-                <p style="margin: 5px 0;"><strong>No. Akaun:</strong> 12345678901</p>
-                <p style="margin: 5px 0;"><strong>Nama Pemegang Akaun:</strong> UTC Perlis</p>
-                <p style="margin: 5px 0;"><strong>Jenis Akaun:</strong> Akaun Semasa</p>
-              </div>
-            </div>
-
             <div class="payment-info">
-              <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">💳 Cara Pembayaran</h3>
-              <ol style="color: #856404; margin: 10px 0; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Buat pembayaran sebanyak <strong>RM ${totalPrice.toFixed(2)}</strong> ke akaun bank di atas</li>
-                <li style="margin-bottom: 8px;">Simpan resit pembayaran (online banking/slip bank)</li>
-                <li style="margin-bottom: 8px;">Muat naik bukti pembayaran melalui pautan di bawah</li>
-                <li style="margin-bottom: 8px;">Tunggu pengesahan dari pihak pengurusan</li>
-              </ol>
+              <h3 style="color: #28a745; margin: 0 0 15px 0; font-size: 18px;">✅ Status Pembayaran</h3>
+              <div style="color: #28a745; background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 5px 0; font-weight: bold;">💳 Pembayaran: TELAH DITERIMA</p>
+                <p style="margin: 5px 0;"><strong>Jumlah:</strong> RM ${totalPrice.toFixed(2)}</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> Bukti pembayaran telah diterima dan sedang diproses</p>
+              </div>
               
               <div style="text-align: center; margin: 20px 0;">
-                <a href="${paymentUploadLink}" class="payment-button">
-                  📤 Muat Naik Bukti Pembayaran
+                <a href="${bookingStatusLink}" class="payment-button" style="background: #28a745;">
+                  📋 Semak Status Tempahan
                 </a>
               </div>
             </div>
 
-            <div class="important-note">
-              <h4 style="margin-top: 0;">⚠️ Penting:</h4>
-              <ul style="margin: 10px 0; padding-left: 20px;">
-                <li>Sila buat pembayaran dalam tempoh <strong>7 hari</strong> dari tarikh email ini</li>
-                <li>Muat naik bukti pembayaran yang jelas dan lengkap</li>
-                <li>Tempahan akan dibatalkan jika pembayaran tidak dibuat dalam tempoh yang ditetapkan</li>
+            <div class="important-note" style="background: #d1ecf1; border: 1px solid #bee5eb;">
+              <h4 style="margin-top: 0; color: #0c5460;">ℹ️ Maklumat Penting:</h4>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #0c5460;">
+                <li>Tempahan anda telah disahkan dan bukti pembayaran telah diterima</li>
+                <li>Anda akan dihubungi jika terdapat sebarang pertanyaan mengenai tempahan</li>
+                <li>Sila tiba di lokasi 15 minit sebelum masa tempahan</li>
                 <li>Untuk sebarang pertanyaan, sila hubungi kami di <strong>010-510 5130</strong></li>
               </ul>
             </div>
@@ -400,7 +389,7 @@ const sendPaymentNotificationEmail = async (data: CreateBookingRequest, bookingN
       await transporter.sendMail({
         from: fromAddress,
         to: data.email,
-        subject: `Tempahan Diluluskan - Sila Buat Pembayaran #${bookingNumber}`,
+        subject: `Tempahan Disahkan - Terima Kasih #${bookingNumber}`,
         html: emailHTML,
       });
       
@@ -441,8 +430,8 @@ const createBookingRecord = async (data: CreateBookingRequest, facilityNumericId
       additionalEquipment: data.rental.additionalEquipment || {}
     },
     meal: data.food || {},
-    bookingStatus: 'AWAITING PAYMENT',
-    paymentStatus: 'UNPAID',
+    bookingStatus: 'APPROVED', // Since payment proof is already uploaded
+    paymentStatus: 'PAID', // Mark as paid since proof is provided
     sessionId: data.sessionId,
     dokumen_berkaitan: fileIds, // Add file references
     bookingNumber: bookingNumberResult.bookingNumber // Store booking number in database
@@ -487,6 +476,13 @@ export async function POST(request: NextRequest) {
 
       // Extract files
       files = formData.getAll('dokumen_berkaitan') as File[];
+      
+      // Extract payment proof files
+      const paymentProofFiles = formData.getAll('payment_proof') as File[];
+      if (paymentProofFiles.length > 0) {
+        files.push(...paymentProofFiles); // Add payment proof files to the files array
+        console.log('📥 Received payment proof files:', paymentProofFiles.length);
+      }
       
     } else {
       // Handle JSON (backward compatibility)
@@ -533,8 +529,8 @@ export async function POST(request: NextRequest) {
     // Create booking record with file references
     const result = await createBookingRecord(validatedData, facility.id, totalPrice, uploadedFileIds);
 
-    // Send payment notification email to the user (new flow)
-    await sendPaymentNotificationEmail(validatedData, result.bookingNumber, facility, totalPrice);
+    // Send booking confirmation email to the user (new flow)
+    await sendBookingConfirmationEmail(validatedData, result.bookingNumber, facility, totalPrice);
 
     // Release any temporary holds for this session
     try {

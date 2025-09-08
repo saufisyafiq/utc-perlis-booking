@@ -18,14 +18,14 @@ export async function POST(request: Request) {
     const getEmailTemplate = (data: NotificationRequest) => {
       const statusText = {
         APPROVED: 'DILULUSKAN',
-        REJECTED: 'DITOLAK',
+        REJECTED: 'DITOLAK & DIBATALKAN',
         CANCELLED: 'DIBATALKAN'
       };
 
       const baseTemplate = `
         <h2>Status Tempahan Fasiliti - ${statusText[data.status as keyof typeof statusText]}</h2>
         <p>Yang Dihormati ${data.name},</p>
-        <p>Tempahan anda untuk <strong>${data.eventName}</strong> pada tarikh <strong>${new Date(data.startDate).toLocaleDateString('ms-MY')}</strong> telah <strong>${statusText[data.status as keyof typeof statusText]}</strong>.</p>
+        <p>Dukacita dimaklumkan bahawa tempahan anda untuk <strong>${data.eventName}</strong> pada tarikh <strong>${new Date(data.startDate).toLocaleDateString('ms-MY')}</strong> telah <strong>${statusText[data.status as keyof typeof statusText]}</strong>.</p>
         
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3>Butiran Tempahan:</h3>
@@ -44,10 +44,20 @@ export async function POST(request: Request) {
         `;
       } else if (data.status === 'REJECTED') {
         return baseTemplate + `
-          <p style="color: #dc3545;">❌ Maaf, tempahan anda telah ditolak.</p>
-          ${data.reason ? `<p><strong>Sebab penolakan:</strong> ${data.reason}</p>` : ''}
-          <p>Anda boleh membuat tempahan baru untuk tarikh dan masa yang lain.</p>
-          <p>Jika terdapat sebarang pertanyaan, sila hubungi pihak UTC Perlis di talian 04-9705310.</p>
+          <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0;">❌ <strong>Maaf, tempahan anda telah ditolak dan dibatalkan.</strong></p>
+          </div>
+          
+          ${data.reason ? `
+            <div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h4 style="margin-top: 0;">📋 Sebab Penolakan & Pembatalan:</h4>
+              <p style="margin-bottom: 0;">${data.reason}</p>
+            </div>
+          ` : ''}
+          
+          
+          <p>Jika ada sebarang pertanyaan mengenai pengembalian bayaran atau tempahan baru, sila hubungi kami di <strong>010-510 5130</strong>.</p>
+          <p>Terima kasih atas pemahaman anda.</p>
         `;
       } else {
         return baseTemplate + `
@@ -79,7 +89,7 @@ export async function POST(request: Request) {
       await transporter.sendMail({
         from: fromAddress,
         to: data.email,
-        subject: `Kemaskini Status Tempahan #${data.bookingId}`,
+        subject: `${data.status === 'REJECTED' ? 'Tempahan Dibatalkan' : 'Kemaskini Status Tempahan'} #${data.bookingId}`,
         html: emailContent,
       });
       

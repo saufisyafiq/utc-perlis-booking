@@ -23,7 +23,6 @@ function BookingSuccessContent() {
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [isPaymentFlow, setIsPaymentFlow] = useState(false);
 
   useEffect(() => {
     // Get booking details from URL parameters
@@ -37,8 +36,6 @@ function BookingSuccessContent() {
     const startTime = searchParams.get('startTime');
     const endTime = searchParams.get('endTime');
     const totalPrice = searchParams.get('totalPrice');
-    const paymentFlow = searchParams.get('paymentFlow');
-
     if (bookingNumber && applicantName && email) {
       setBookingDetails({
         bookingNumber,
@@ -52,7 +49,6 @@ function BookingSuccessContent() {
         endTime: endTime || '',
         totalPrice: totalPrice ? parseFloat(totalPrice) : 0
       });
-      setIsPaymentFlow(paymentFlow === 'true');
     } else {
       setError('Maklumat tempahan tidak dijumpai. Sila hubungi pentadbir sistem.');
     }
@@ -154,13 +150,10 @@ function BookingSuccessContent() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold mb-2">
-              {isPaymentFlow ? '🎉 Tempahan Berjaya! Sila Buat Pembayaran' : '🎉 Tempahan Berjaya Dihantar!'}
+              Tempahan Berjaya!
             </h1>
             <p className="text-green-100 text-lg">
-              {isPaymentFlow 
-                ? 'Tempahan anda telah berjaya diterima. Sila buat pembayaran untuk mengesahkan tempahan anda.'
-                : 'Permohonan tempahan anda telah berjaya diterima dan sedang dalam proses semakan'
-              }
+              Tempahan anda telah berjaya diterima dan pembayaran telah disahkan. Tempahan anda kini menunggu kelulusan akhir.
             </p>
           </div>
 
@@ -260,73 +253,33 @@ function BookingSuccessContent() {
             </h2>
             
             <div className="space-y-4">
-              {isPaymentFlow ? (
-                <>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h3 className="font-medium text-yellow-800 mb-2">📧 Email Pembayaran</h3>
-                    <p className="text-sm text-yellow-700">
-                      Email arahan pembayaran telah dihantar ke <strong>{bookingDetails.email}</strong>. 
-                      Sila semak kotak masuk anda untuk maklumat terperinci.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h3 className="font-medium text-red-800 mb-2">⚠️ Penting - Buat Pembayaran</h3>
-                    <p className="text-sm text-red-700 mb-2">
-                      Sila buat pembayaran dalam tempoh <strong>7 hari</strong> untuk mengesahkan tempahan anda.
-                    </p>
-                    <p className="text-sm text-red-700">
-                      Tempahan akan dibatalkan secara automatik jika pembayaran tidak dibuat dalam tempoh yang ditetapkan.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h3 className="font-medium text-green-800 mb-2">💳 Muat Naik Bukti Pembayaran</h3>
-                    <p className="text-sm text-green-700 mb-3">
-                      Selepas membuat pembayaran, sila muat naik bukti pembayaran melalui sistem kami.
-                    </p>
-                    <Link
-                      href={`/tempahan/status?booking=${bookingDetails.bookingNumber}&email=${encodeURIComponent(bookingDetails.email)}`}
-                      className="inline-flex items-center bg-green-600 text-white rounded-lg px-4 py-2 hover:bg-green-700 transition-colors text-sm font-medium"
-                    >
-                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      Muat Naik Bukti Pembayaran
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h3 className="font-medium text-yellow-800 mb-2">📧 Pengesahan Email</h3>
-                    <p className="text-sm text-yellow-700">
-                      Email pengesahan telah dihantar ke <strong>{bookingDetails.email}</strong>. 
-                      Sila semak kotak masuk anda.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="font-medium text-blue-800 mb-2">⏳ Proses Semakan</h3>
-                    <p className="text-sm text-blue-700">
-                      Permohonan anda sedang dalam proses semakan oleh pihak pengurusan. 
-                      Anda akan menerima notifikasi dalam tempoh 1-2 hari bekerja.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h3 className="font-medium text-green-800 mb-2">💳 Pembayaran</h3>
-                    <p className="text-sm text-green-700">
-                      Sekiranya tempahan diluluskan, anda akan menerima arahan pembayaran melalui email.
-                    </p>
-                  </div>
-                </>
-              )}
+              {/* <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-medium text-green-800 mb-2">✅ Pembayaran Disahkan</h3>
+                <p className="text-sm text-green-700">
+                  Pembayaran anda telah berjaya diproses dan disahkan. Terima kasih!
+                </p>
+              </div> */}
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="font-medium text-yellow-800 mb-2">📧 Pengesahan Email</h3>
+                <p className="text-sm text-yellow-700">
+                  Email pengesahan tempahan telah dihantar ke <strong>{bookingDetails.email}</strong>. 
+                  Sila semak emel anda untuk maklumat terperinci.
+                </p>
+              </div>
+              
+              {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-medium text-blue-800 mb-2">⏳ Kelulusan Akhir</h3>
+                <p className="text-sm text-blue-700">
+                  Tempahan anda kini menunggu kelulusan akhir dari pihak pengurusan. 
+                  Anda akan menerima notifikasi kelulusan dalam tempoh 1-2 hari bekerja.
+                </p>
+              </div> */}
               
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h3 className="font-medium text-gray-800 mb-2">📞 Bantuan</h3>
                 <p className="text-sm text-gray-700">
-                  Sekiranya anda mempunyai pertanyaan, sila hubungi kami di <strong>010-510 5130</strong> 
+                  Sekiranya anda mempunyai pertanyaan, sila hubungi kami di <strong>049705310 </strong> 
                   dengan menyebut nombor rujukan: <strong>{bookingDetails.bookingNumber}</strong>
                 </p>
               </div>
@@ -336,75 +289,39 @@ function BookingSuccessContent() {
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          {isPaymentFlow ? (
-            <>
-              <Link
-                href={`/tempahan/status?booking=${bookingDetails.bookingNumber}&email=${encodeURIComponent(bookingDetails.email)}`}
-                className="flex items-center justify-center bg-green-600 text-white rounded-lg px-8 py-3 hover:bg-green-700 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Muat Naik Bukti Pembayaran
-              </Link>
-              
-              <Link
-                href="/"
-                className="flex items-center justify-center bg-blue-600 text-white rounded-lg px-8 py-3 hover:bg-blue-700 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Kembali ke Halaman Utama
-              </Link>
-              
-              <Link
-                href="/fasiliti"
-                className="flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg px-8 py-3 hover:bg-gray-300 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Buat Tempahan Baru
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/"
-                className="flex items-center justify-center bg-blue-600 text-white rounded-lg px-8 py-3 hover:bg-blue-700 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Kembali ke Halaman Utama
-              </Link>
-              
-              <Link
-                href="/fasiliti"
-                className="flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg px-8 py-3 hover:bg-gray-300 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Buat Tempahan Baru
-              </Link>
-              
-              <Link
-                href="/tempahan/status"
-                className="flex items-center justify-center bg-green-600 text-white rounded-lg px-8 py-3 hover:bg-green-700 transition-colors font-medium"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Semak Status Tempahan
-              </Link>
-            </>
-          )}
+          <Link
+            href="/"
+            className="flex items-center justify-center bg-blue-600 text-white rounded-lg px-8 py-3 hover:bg-blue-700 transition-colors font-medium"
+          >
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Kembali ke Halaman Utama
+          </Link>
+          
+          <Link
+            href="/fasiliti"
+            className="flex items-center justify-center bg-gray-200 text-gray-700 rounded-lg px-8 py-3 hover:bg-gray-300 transition-colors font-medium"
+          >
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Buat Tempahan Baru
+          </Link>
+          
+          <Link
+            href="/tempahan/status"
+            className="flex items-center justify-center bg-green-600 text-white rounded-lg px-8 py-3 hover:bg-green-700 transition-colors font-medium"
+          >
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Semak Status Tempahan
+          </Link>
         </div>
 
         {/* Print/Save Instructions */}
-        <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        {/* <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
           <h3 className="font-medium text-gray-800 mb-2">💾 Simpan Maklumat Ini</h3>
           <p className="text-sm text-gray-600 mb-4">
             Disyorkan untuk menyimpan halaman ini (Ctrl+S) atau mengambil tangkapan skrin 
@@ -419,7 +336,7 @@ function BookingSuccessContent() {
             </svg>
             Cetak Halaman Ini
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

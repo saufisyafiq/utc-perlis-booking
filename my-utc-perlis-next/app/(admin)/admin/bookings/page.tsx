@@ -62,9 +62,9 @@ interface Booking {
   endTime: string;
   attendance: number;
   totalPrice: number;
-  bookingStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'AWAITING_PAYMENT' | 'REVIEW PAYMENT';
+  bookingStatus: 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REVIEW PAYMENT';
   statusReason?: string;
-  paymentStatus: 'PAID' | 'UNPAID' | 'VERIFIED';
+  paymentStatus: 'PAID' | 'FAILED' | 'VERIFIED';
   packageType: 'HOURLY' | 'HALF_DAY' | 'FULL_DAY';
   facility: {
     id: number;
@@ -160,13 +160,10 @@ export default function BookingManagement() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showEmailTestDialog, setShowEmailTestDialog] = useState(false);
   const [testEmail, setTestEmail] = useState('');
-  const [showPriceEditDialog, setShowPriceEditDialog] = useState(false);
-  const [editedPrice, setEditedPrice] = useState<string>('');
 
   // Debug function to test API connectivity
   const testAPIConnection = async () => {
@@ -251,7 +248,7 @@ export default function BookingManagement() {
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     
     // For current page stats
-    const pendingCount = currentBookings.filter(b => b.bookingStatus === 'PENDING').length;
+    const reviewCount = currentBookings.filter(b => b.bookingStatus === 'REVIEW PAYMENT').length;
     const approvedCount = currentBookings.filter(b => b.bookingStatus === 'APPROVED').length;
     const rejectedCount = currentBookings.filter(b => b.bookingStatus === 'REJECTED').length;
     const revenue = currentBookings
@@ -266,7 +263,7 @@ export default function BookingManagement() {
     
     return {
       totalBookings: total,
-      pendingBookings: pendingCount,
+      pendingBookings: reviewCount, // Now represents bookings under review
       approvedBookings: approvedCount,
       rejectedBookings: rejectedCount,
       totalRevenue: revenue,
@@ -295,9 +292,12 @@ export default function BookingManagement() {
         processedAt: new Date().toISOString(),
       };
 
-      // When approving a booking, also set payment status to VERIFIED
+      // When approving a booking, keep payment status as VERIFIED
+      // When rejecting a booking, set payment status to FAILED
       if (status === 'APPROVED') {
         updatePayload.paymentStatus = 'VERIFIED';
+      } else if (status === 'REJECTED') {
+        updatePayload.paymentStatus = 'FAILED';
       }
       
       const response = await fetch('/api/admin/bookings/update', {
@@ -337,31 +337,6 @@ export default function BookingManagement() {
     }
   };
 
-  // Handle confirmation for proceeding with payment
-  const handleProceedPaymentClick = () => {
-    if (selectedBooking) {
-      setEditedPrice(selectedBooking.totalPrice.toString());
-      setShowPriceEditDialog(true);
-    }
-  };
-
-  const handlePriceConfirmation = () => {
-    const price = parseFloat(editedPrice);
-    if (isNaN(price) || price <= 0) {
-      alert('Sila masukkan harga yang sah');
-      return;
-    }
-    setShowPriceEditDialog(false);
-    setShowConfirmPaymentDialog(true);
-  };
-
-  const confirmProceedPayment = async () => {
-    if (selectedBooking) {
-      const finalPrice = parseFloat(editedPrice);
-      setShowConfirmPaymentDialog(false);
-      await updateBookingToProceedPayment(selectedBooking.documentId, finalPrice);
-    }
-  };
 
   // Test email functionality
   const handleTestEmail = async () => {
@@ -398,71 +373,6 @@ export default function BookingManagement() {
     }
   };
 
-  // Update booking to proceed with payment (PENDING -> AWAITING_PAYMENT)
-  const updateBookingToProceedPayment = async (bookingId: string, newPrice?: number) => {
-    try {
-      setActionLoading(bookingId);
-      
-      console.log('Updating booking:', bookingId, 'to AWAITING PAYMENT', newPrice ? `with new price: ${newPrice}` : '');
-      
-      const updateData: {
-        documentId: string;
-        bookingStatus: string;
-        processedAt: string;
-        totalPrice?: number;
-      } = {
-        documentId: bookingId,
-        bookingStatus: 'AWAITING PAYMENT',
-        processedAt: new Date().toISOString(),
-      };
-
-      if (newPrice !== undefined) {
-        updateData.totalPrice = newPrice;
-      }
-      
-      const response = await fetch('/api/admin/bookings/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('API Error:', errorData);
-        throw new Error(`Failed to update booking: ${response.status} - ${errorData}`);
-      }
-      
-      const result = await response.json();
-      console.log('Update successful:', result);
-      
-      // Send email notification with payment link
-      if (selectedBooking) {
-        const updatedBooking = { ...selectedBooking, totalPrice: newPrice || selectedBooking.totalPrice };
-        await sendPaymentNotification(updatedBooking);
-      }
-      
-      // Show success dialog
-      const priceUpdateMessage = newPrice && newPrice !== selectedBooking?.totalPrice 
-        ? ` Harga telah dikemaskini kepada RM ${newPrice.toFixed(2)}.` 
-        : '';
-      setSuccessMessage(`Status tempahan telah berjaya dikemaskini kepada "MENUNGGU PEMBAYARAN".${priceUpdateMessage} Notifikasi telah dihantar kepada pelanggan (${selectedBooking?.email}) untuk meneruskan pembayaran.`);
-      setShowSuccessDialog(true);
-      
-      // Refresh data
-      await fetchBookings(currentPage, statusFilter, searchTerm);
-      setSelectedBooking(null);
-      setEditedPrice('');
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      alert(`Failed to proceed with payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const sendStatusNotification = async (booking: Booking, status: string, reason?: string) => {
     try {
@@ -484,25 +394,6 @@ export default function BookingManagement() {
     }
   };
 
-  const sendPaymentNotification = async (booking: Booking) => {
-    try {
-      await fetch('/api/notifications/payment-approval', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: booking.email,
-          name: booking.name,
-          bookingId: booking.bookingNumber,
-          eventName: booking.eventName,
-          startDate: booking.startDate,
-          totalPrice: booking.totalPrice,
-          facility: booking.facility.name,
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to send payment notification:', error);
-    }
-  };
 
   // Handle page changes
   const handlePageChange = (page: number) => {
@@ -529,11 +420,9 @@ export default function BookingManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800';
       case 'APPROVED': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
       case 'REJECTED': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
       case 'CANCELLED': return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800';
-      case 'AWAITING_PAYMENT': return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
       case 'REVIEW PAYMENT': return 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800';
       default: return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800';
     }
@@ -541,10 +430,8 @@ export default function BookingManagement() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'PENDING': return <ClockIcon className="h-4 w-4" />;
       case 'APPROVED': return <CheckCircleIcon className="h-4 w-4" />;
       case 'REJECTED': return <XCircleIcon className="h-4 w-4" />;
-      case 'AWAITING_PAYMENT': return <AlertCircleIcon className="h-4 w-4" />;
       case 'REVIEW PAYMENT': return <EyeIcon className="h-4 w-4" />;
       default: return <AlertCircleIcon className="h-4 w-4" />;
     }
@@ -552,7 +439,7 @@ export default function BookingManagement() {
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'UNPAID': return 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800';
+      case 'FAILED': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
       case 'PAID': return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
       case 'VERIFIED': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
       default: return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800';
@@ -600,15 +487,15 @@ export default function BookingManagement() {
           </CardContent>
         </Card>
         
-        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20">
+        <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20">
           <CardHeader className="pb-2">
             <CardDescription className="text-sm flex items-center">
-              <AlertCircleIcon className="h-4 w-4 mr-1 text-yellow-600 dark:text-yellow-400" />
-              Menunggu
+              <EyeIcon className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
+              Semakan Bayaran
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{stats.pendingBookings}</div>
+            <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{stats.pendingBookings}</div>
           </CardContent>
         </Card>
 
@@ -694,11 +581,9 @@ export default function BookingManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Semua Status</SelectItem>
-                <SelectItem value="PENDING">Menunggu</SelectItem>
+                <SelectItem value="REVIEW PAYMENT">Semakan Bayaran</SelectItem>
                 <SelectItem value="APPROVED">Diluluskan</SelectItem>
                 <SelectItem value="REJECTED">Ditolak</SelectItem>
-                <SelectItem value="AWAITING_PAYMENT">Menunggu Bayaran</SelectItem>
-                <SelectItem value="REVIEW PAYMENT">Semakan Bayaran</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1140,75 +1025,38 @@ export default function BookingManagement() {
               </Card>
             </div>
 
-            {(selectedBooking.bookingStatus === 'PENDING' || 
-              selectedBooking.bookingStatus === 'AWAITING_PAYMENT' || 
-              selectedBooking.bookingStatus === 'REVIEW PAYMENT') && (
+            {selectedBooking.bookingStatus === 'REVIEW PAYMENT' && (
               <DialogFooter className="flex gap-4 pt-6 border-t">
-                {selectedBooking.bookingStatus === 'PENDING' && (
-                  <>
-                    <Button
-                      onClick={handleProceedPaymentClick}
-                      disabled={actionLoading === selectedBooking.documentId}
-                      className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-                    >
-                      <CheckCircleIcon className="h-4 w-4 mr-2" />
-                      {actionLoading === selectedBooking.documentId ? 'Memproses...' : 'Teruskan Pembayaran'}
-                    </Button>
-                    
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setShowRejectionDialog(true)}
-                      disabled={actionLoading === selectedBooking.documentId}
-                    >
-                      <XCircleIcon className="h-4 w-4 mr-2" />
-                      Tolak Tempahan
-                    </Button>
-                  </>
-                )}
-
-                {selectedBooking.bookingStatus === 'AWAITING_PAYMENT' && (
-                  <>
-                    <Button
-                      onClick={() => updateBookingStatus(selectedBooking.documentId, 'APPROVED')}
-                      disabled={actionLoading === selectedBooking.documentId}
-                      className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-                    >
-                      <CheckCircleIcon className="h-4 w-4 mr-2" />
-                      {actionLoading === selectedBooking.documentId ? 'Memproses...' : 'Luluskan Tempahan'}
-                    </Button>
-                    
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setShowRejectionDialog(true)}
-                      disabled={actionLoading === selectedBooking.documentId}
-                    >
-                      <XCircleIcon className="h-4 w-4 mr-2" />
-                      Tolak Tempahan
-                    </Button>
-                  </>
-                )}
-
-                {selectedBooking.bookingStatus === 'REVIEW PAYMENT' && (
-                  <>
-                    <Button
-                      onClick={() => updateBookingStatus(selectedBooking.documentId, 'APPROVED')}
-                      disabled={actionLoading === selectedBooking.documentId}
-                      className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-                    >
-                      <CheckCircleIcon className="h-4 w-4 mr-2" />
-                      {actionLoading === selectedBooking.documentId ? 'Memproses...' : 'Sahkan Pembayaran'}
-                    </Button>
-                    
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setShowRejectionDialog(true)}
-                      disabled={actionLoading === selectedBooking.documentId}
-                    >
-                      <XCircleIcon className="h-4 w-4 mr-2" />
-                      Tolak Pembayaran
-                    </Button>
-                  </>
-                )}
+                <Button
+                  onClick={() => updateBookingStatus(selectedBooking.documentId, 'APPROVED')}
+                  disabled={actionLoading === selectedBooking.documentId}
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
+                >
+                  <CheckCircleIcon className="h-4 w-4 mr-2" />
+                  {actionLoading === selectedBooking.documentId ? 'Memproses...' : 'Terima Tempahan'}
+                </Button>
+                
+                <Button 
+                  variant="destructive"
+                  onClick={() => setShowRejectionDialog(true)}
+                  disabled={actionLoading === selectedBooking.documentId}
+                >
+                  <XCircleIcon className="h-4 w-4 mr-2" />
+                  Tolak Tempahan
+                </Button>
+              </DialogFooter>
+            )}
+            
+            {selectedBooking.bookingStatus === 'APPROVED' && (
+              <DialogFooter className="flex gap-4 pt-6 border-t">
+                <Button 
+                  variant="destructive"
+                  onClick={() => setShowRejectionDialog(true)}
+                  disabled={actionLoading === selectedBooking.documentId}
+                >
+                  <XCircleIcon className="h-4 w-4 mr-2" />
+                  Batalkan Tempahan
+                </Button>
               </DialogFooter>
             )}
           </DialogContent>
@@ -1224,12 +1072,12 @@ export default function BookingManagement() {
               Tolak Tempahan
             </DialogTitle>
             <DialogDescription>
-              Sila berikan sebab penolakan untuk tempahan ini. Sebab ini akan dihantar kepada pemohon.
+              Sila berikan sebab penolakan/pembatalan untuk tempahan ini. Sebab ini akan dihantar kepada pemohon melalui email.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
-              placeholder="Sebab penolakan (contoh: Fasiliti tidak tersedia pada tarikh tersebut, Dokumen tidak lengkap, dll.)"
+              placeholder="Sebab penolakan/pembatalan (contoh: Bukti pembayaran tidak sah, Fasiliti tidak tersedia, Pelanggaran terma dan syarat, dll.)"
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               className="min-h-[100px]"
@@ -1256,113 +1104,13 @@ export default function BookingManagement() {
               variant="destructive"
             >
               <XCircleIcon className="h-4 w-4 mr-2" />
-              {actionLoading === selectedBooking?.documentId ? 'Memproses...' : 'Tolak Tempahan'}
+              {actionLoading === selectedBooking?.documentId ? 'Memproses...' : 
+                (selectedBooking?.bookingStatus === 'APPROVED' ? 'Batalkan Tempahan' : 'Tolak Tempahan')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Price Edit Dialog */}
-      <Dialog open={showPriceEditDialog} onOpenChange={setShowPriceEditDialog}>
-        <DialogContent className="max-w-md bg-background text-foreground">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DownloadIcon className="h-5 w-5 text-primary" />
-              Edit Harga Tempahan
-            </DialogTitle>
-            <DialogDescription>
-              Kemaskini harga yang perlu dibayar oleh pelanggan untuk tempahan ini.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Tempahan:</p>
-              <p className="font-medium">{selectedBooking?.eventName}</p>
-              <p className="text-sm text-muted-foreground mt-2">Pelanggan:</p>
-              <p className="font-medium">{selectedBooking?.name}</p>
-              <p className="text-sm text-muted-foreground mt-2">Harga Asal:</p>
-              <p className="font-medium">RM {selectedBooking?.totalPrice?.toFixed(2)}</p>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="edited-price" className="text-sm font-medium">
-                Kemaskini Harga (jika berkenaan)(RM):
-              </label>
-              <Input
-                id="edited-price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={editedPrice}
-                onChange={(e) => setEditedPrice(e.target.value)}
-                className="text-right"
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPriceEditDialog(false);
-                setEditedPrice('');
-              }}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handlePriceConfirmation}
-              disabled={!editedPrice.trim() || parseFloat(editedPrice) <= 0}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <CheckCircleIcon className="h-4 w-4 mr-2" />
-              Kemaskini Harga
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog for Payment Proceed */}
-      <Dialog open={showConfirmPaymentDialog} onOpenChange={setShowConfirmPaymentDialog}>
-        <DialogContent className="max-w-md bg-background text-foreground">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircleIcon className="h-5 w-5 text-green-600" />
-              Teruskan Pembayaran
-            </DialogTitle>
-            <DialogDescription>
-              Adakah anda pasti untuk meneruskan tempahan ini ke tahap pembayaran? 
-              Sistem akan menghantar notifikasi kepada pelanggan untuk membuat pembayaran.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Tempahan:</p>
-              <p className="font-medium">{selectedBooking?.eventName}</p>
-              <p className="text-sm text-muted-foreground mt-2">Pelanggan:</p>
-              <p className="font-medium">{selectedBooking?.name} ({selectedBooking?.email})</p>
-              <p className="text-sm text-muted-foreground mt-2">Harga:</p>
-              <p className="font-medium">RM {parseFloat(editedPrice || '0').toFixed(2)}</p>
-            </div>
-          </div>
-          <DialogFooter className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirmPaymentDialog(false)}
-              disabled={actionLoading === selectedBooking?.documentId}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={confirmProceedPayment}
-              disabled={actionLoading === selectedBooking?.documentId}
-              className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-            >
-              <CheckCircleIcon className="h-4 w-4 mr-2" />
-              {actionLoading === selectedBooking?.documentId ? 'Memproses...' : 'Ya, Teruskan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>

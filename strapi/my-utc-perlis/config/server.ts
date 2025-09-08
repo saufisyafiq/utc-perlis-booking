@@ -9,7 +9,10 @@ export default ({ env }) => ({
   },
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
-  url: env('PUBLIC_URL', 'https://strapi.utcperlis.com'),
+  // Only set URL in production - this allows localhost access in development
+  ...(env('NODE_ENV') === 'production' && {
+    url: env('PUBLIC_URL', 'https://strapi.utcperlis.com'),
+  }),
   app: {
     keys: env.array('APP_KEYS'),
   },

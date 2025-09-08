@@ -72,7 +72,7 @@ export function buildStrapiUrl(endpoint: string): string | null {
   
   // Remove leading slash from endpoint if present
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  
+  console.log('🔍 Building Strapi URL:', `${baseUrl}/${cleanEndpoint}`);
   return `${baseUrl}/${cleanEndpoint}`;
 }
 

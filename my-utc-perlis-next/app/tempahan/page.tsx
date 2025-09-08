@@ -89,6 +89,13 @@ function BookingFormContent() {
   const [activeStep, setActiveStep] = useState<number>(1);
   const [sessionId] = useState<string>(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [bookingData, setBookingData] = useState<any>(null);
+  
+  // Payment proof upload states (reusing from status page)
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string>('');
+  const [uploadLoading, setUploadLoading] = useState<boolean>(false);
+  const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
+  const [showQRModal, setShowQRModal] = useState<boolean>(false);
   const searchParams = useSearchParams();
   const facilityId = searchParams.get('facilityId');
   
@@ -137,10 +144,17 @@ function BookingFormContent() {
         console.log(`Fetching from: ${apiUrl}`);
         
         const res = await fetch(apiUrl, {
-          cache: 'no-store'
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          }
         });
         
-        if (!res.ok) throw new Error('Failed to fetch facility');
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('❌ Response error:', errorText);
+          throw new Error(`Failed to fetch facility: ${res.status} ${res.statusText}`);
+        }
         
         const responseData = await res.json();
         console.log('Facility API response:', responseData);
@@ -149,6 +163,9 @@ function BookingFormContent() {
           // Log the facility data to see its structure
           console.log('Facility data:', responseData.data[0]);
           setFacilityData(responseData.data[0]);
+        } else {
+          console.error('❌ No facility data found');
+          setSubmitError('Facility not found. Please check the facility ID.');
         }
       } catch (error) {
         console.error('Error fetching facility:', error);
@@ -451,6 +468,10 @@ const memoizedExistingBookings = useMemo(() => {
         return !!(watch('purpose') && watch('eventName') && watch('startDate') && watch('endDate') && watch('attendance') && watch('packageType'));
       case 3:
         return true; // Equipment is optional
+      case 4:
+        return true; // Food is optional
+      case 5:
+        return uploadFile !== null; // Payment proof is required
       default:
         return false;
     }
@@ -487,8 +508,12 @@ const memoizedExistingBookings = useMemo(() => {
         // Equipment is optional, no validation needed
         break;
         
-      case 4:
+              case 4:
         // Food is optional, no validation needed
+        break;
+        
+      case 5:
+        if (!uploadFile) stepErrors.push('Bukti pembayaran diperlukan');
         break;
     }
     
@@ -498,7 +523,7 @@ const memoizedExistingBookings = useMemo(() => {
   // Helper function to get all validation errors
   const getAllValidationErrors = (): { [key: number]: string[] } => {
     const allErrors: { [key: number]: string[] } = {};
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 5; i++) {
       const stepErrors = validateStep(i);
       if (stepErrors.length > 0) {
         allErrors[i] = stepErrors;
@@ -514,8 +539,8 @@ const memoizedExistingBookings = useMemo(() => {
     console.log('Selected date:', selectedDate);
     console.log('Active step:', activeStep);
     
-    // Only validate on final submission (step 4)
-    if (activeStep === 4) {
+    // Only validate on final submission (step 5)
+    if (activeStep === 5) {
       // Check for validation errors across all steps
       const allErrors = getAllValidationErrors();
       const hasErrors = Object.keys(allErrors).length > 0;
@@ -708,6 +733,11 @@ const memoizedExistingBookings = useMemo(() => {
       attachedFiles.forEach((file, index) => {
         formData.append(`dokumen_berkaitan`, file);
       });
+      
+      // Add payment proof file
+      if (uploadFile) {
+        formData.append(`payment_proof`, uploadFile);
+      }
 
       // Submit the booking
       const response = await fetch('/api/bookings/create', {
@@ -731,9 +761,12 @@ const memoizedExistingBookings = useMemo(() => {
         setSubmitSuccess(true);
         
         // Show success message with file upload info
-        let successMessage = 'Tempahan anda telah berjaya dihantar.';
+        let successMessage = 'Tempahan anda telah berjaya dihantar dan disahkan.';
         if (result.filesUploaded > 0) {
           successMessage += ` ${result.filesUploaded} fail dokumen juga telah berjaya dimuat naik.`;
+        }
+        if (uploadFile) {
+          successMessage += ` Bukti pembayaran telah diterima.`;
         }
         setSubmitSuccessMessage(successMessage);
         setSubmitError(''); // Clear any previous errors
@@ -750,7 +783,7 @@ const memoizedExistingBookings = useMemo(() => {
           startTime: bookingData.startTime,
           endTime: bookingData.endTime,
           totalPrice: frontendTotalPrice.toString(),
-          paymentFlow: 'true'
+          paymentFlow: 'false' // Payment already completed
         });
         
         // Reset form after successful submission and redirect with details
@@ -790,7 +823,7 @@ const memoizedExistingBookings = useMemo(() => {
     setSubmitError('');
     
     // Proceed to next step
-    const newStep = Math.min(activeStep + 1, 4);
+    const newStep = Math.min(activeStep + 1, 5);
     setActiveStep(newStep);
     
     // If moving to final step, recalculate price to ensure it's displayed
@@ -808,56 +841,94 @@ const memoizedExistingBookings = useMemo(() => {
 
   const renderStepIndicator = () => {
     return (
-      <div className="mb-8">
-        <ol className="flex items-center w-full text-sm font-medium text-center text-gray-500 sm:text-base">
-          {[1, 2, 3, 4].map(step => {
-            const isCompleted = activeStep > step;
-            const isActive = activeStep === step;
-            
-            return (
-              <li key={step} className={`flex md:w-full items-center ${
-                isActive 
-                  ? 'text-blue-600' 
-                  : isCompleted 
-                    ? 'text-green-600' 
-                    : 'text-gray-500'
-              }`}>
-                <span className={`flex items-center justify-center w-8 h-8 mr-2 ${
+      <div className="mb-6 sm:mb-8">
+        {/* Mobile: Vertical Step Indicator */}
+        <div className="block sm:hidden">
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Langkah</span>
+              <span className="text-sm font-semibold text-blue-600">{activeStep} daripada 5</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out"
+                style={{ width: `${(activeStep / 5) * 100}%` }}
+              ></div>
+            </div>
+            <div className="mt-3">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {activeStep === 1 && 'Maklumat Pemohon'}
+                {activeStep === 2 && 'Maklumat Tempahan'}
+                {activeStep === 3 && 'Fasiliti Sewaan'}
+                {activeStep === 4 && 'Makanan & Minuman'}
+                {activeStep === 5 && 'Bukti Pembayaran'}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {activeStep === 1 && 'Sila isi maklumat peribadi anda'}
+                {activeStep === 2 && 'Pilih tarikh dan masa tempahan'}
+                {activeStep === 3 && 'Pilih peralatan tambahan (pilihan)'}
+                {activeStep === 4 && 'Pilih makanan dan minuman (pilihan)'}
+                {activeStep === 5 && 'Muat naik bukti pembayaran'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop: Horizontal Step Indicator */}
+        <div className="hidden sm:block">
+          <ol className="flex items-center w-full text-sm font-medium text-center text-gray-500 lg:text-base">
+            {[1, 2, 3, 4, 5].map(step => {
+              const isCompleted = activeStep > step;
+              const isActive = activeStep === step;
+              
+              return (
+                <li key={step} className={`flex w-full items-center ${
                   isActive 
-                    ? 'bg-blue-100' 
+                    ? 'text-blue-600' 
                     : isCompleted 
-                      ? 'bg-green-100' 
-                      : 'bg-gray-100'
-                } rounded-full shrink-0`}>
-                  {isCompleted ? (
-                    <svg className="w-3.5 h-3.5 text-green-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5.917 5.724 10.5 15 1.5"/>
-                    </svg>
-                  ) : (
-                    step
+                      ? 'text-green-600' 
+                      : 'text-gray-500'
+                }`}>
+                  <span className={`flex items-center justify-center w-10 h-10 mr-3 ${
+                    isActive 
+                      ? 'bg-blue-100 ring-4 ring-blue-50' 
+                      : isCompleted 
+                        ? 'bg-green-100 ring-4 ring-green-50' 
+                        : 'bg-gray-100'
+                  } rounded-full shrink-0 transition-all duration-200`}>
+                    {isCompleted ? (
+                      <svg className="w-4 h-4 text-green-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 12">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5.917 5.724 10.5 15 1.5"/>
+                      </svg>
+                    ) : (
+                      <span className={`text-sm font-semibold ${
+                        isActive ? 'text-blue-600' : 'text-gray-600'
+                      }`}>{step}</span>
+                    )}
+                  </span>
+                  <div className="flex flex-col text-left">
+                    <span className={`text-sm font-medium ${
+                      isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {step === 1 && 'Maklumat Pemohon'}
+                      {step === 2 && 'Maklumat Tempahan'}
+                      {step === 3 && 'Fasiliti Sewaan'}
+                      {step === 4 && 'Makanan & Minuman'}
+                      {step === 5 && 'Bukti Pembayaran'}
+                    </span>
+                  </div>
+                  
+                  {/* Show connector lines between steps except for the last one */}
+                  {step < 5 && (
+                    <div className={`flex-auto border-t-2 transition duration-500 ease-in-out mx-4 ${
+                      isCompleted ? 'border-green-300' : 'border-gray-300'
+                    }`}></div>
                   )}
-                </span>
-                <span className="hidden md:inline-flex">
-                  {step === 1 && 'Maklumat Pemohon'}
-                  {step === 2 && 'Maklumat Tempahan'}
-                  {step === 3 && 'Fasiliti Sewaan'}
-                  {step === 4 && 'Makanan & Minuman'}
-                </span>
-                <span className="md:hidden">
-                  {step === 1 && 'Pemohon'}
-                  {step === 2 && 'Tempahan'}
-                  {step === 3 && 'Fasiliti'}
-                  {step === 4 && 'Makanan'}
-                </span>
-                
-                {/* Show connector lines between steps except for the last one */}
-                {step < 4 && (
-                  <div className="flex-auto border-t-2 transition duration-500 ease-in-out border-gray-300 mx-2"></div>
-                )}
-              </li>
-            );
-          })}
-        </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </div>
     );
   };
@@ -1041,9 +1112,49 @@ const memoizedExistingBookings = useMemo(() => {
     return '📎';
   };
 
+  // Payment proof file handling functions (reused from status page)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type (images and PDFs)
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        setUploadError('Sila pilih fail gambar (JPG, PNG) atau PDF sahaja');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('Saiz fail tidak boleh melebihi 5MB');
+        return;
+      }
+      
+      setUploadFile(file);
+      setUploadError('');
+    }
+  };
+
+  // Add keyboard handler for QR modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showQRModal) {
+        setShowQRModal(false);
+      }
+    };
+
+    if (showQRModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showQRModal]);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Permohonan Tempahan {facilityData?.name}</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Permohonan Tempahan {facilityData?.name}</h1>
       
       {/* Facility Details Card */}
       {facilityData && (
@@ -1152,11 +1263,20 @@ const memoizedExistingBookings = useMemo(() => {
         {facilityData && (
           <>
         {/* Maklumat Pemohon */}
-            <section className={`bg-gray-50 p-6 rounded-lg ${activeStep !== 1 ? 'hidden' : ''}`}>
-          <h2 className="text-xl font-semibold mb-4">A. Maklumat Pemohon</h2>
-          <div className="space-y-4">
+            <section className={`${activeStep !== 1 ? 'hidden' : ''}`}>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-lg mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 text-gray-900 flex items-center">
+              <span className="bg-blue-600 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+              Maklumat Pemohon
+            </h2>
+            <p className="text-sm text-gray-600">Sila isi maklumat peribadi anda dengan lengkap</p>
+          </div>
+          
+          <div className="space-y-6">
             <div>
-              <label className="block mb-1">Nama</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Nama <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 {...register('applicantName', { 
@@ -1164,13 +1284,23 @@ const memoizedExistingBookings = useMemo(() => {
                   minLength: { value: 2, message: 'Nama mestilah sekurang-kurangnya 2 aksara' },
                   maxLength: { value: 100, message: 'Nama tidak boleh melebihi 100 aksara' }
                 })}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
+                placeholder="Masukkan nama penuh anda"
               />
-              {errors.applicantName && <span className="text-red-500 text-sm">{errors.applicantName.message}</span>}
+              {errors.applicantName && (
+                <div className="mt-2 flex items-center text-red-600 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.applicantName.message}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block mb-1">Jabatan / Agensi</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Jabatan / Agensi <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 {...register('department', { 
@@ -1178,27 +1308,47 @@ const memoizedExistingBookings = useMemo(() => {
                   minLength: { value: 2, message: 'Jabatan mestilah sekurang-kurangnya 2 aksara' },
                   maxLength: { value: 200, message: 'Jabatan tidak boleh melebihi 200 aksara' }
                 })}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
+                placeholder="Contoh: Jabatan Kesihatan Negeri Perlis"
               />
-              {errors.department && <span className="text-red-500 text-sm">{errors.department.message}</span>}
+              {errors.department && (
+                <div className="mt-2 flex items-center text-red-600 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.department.message}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block mb-1">Alamat</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Alamat <span className="text-red-500">*</span>
+              </label>
               <textarea
                 {...register('address', { 
                   required: 'Alamat diperlukan',
                   minLength: { value: 10, message: 'Alamat mestilah sekurang-kurangnya 10 aksara' },
                   maxLength: { value: 500, message: 'Alamat tidak boleh melebihi 500 aksara' }
                 })}
-                className="w-full p-2 border rounded"
-                rows={3}
+                className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base resize-none"
+                rows={4}
+                placeholder="Masukkan alamat lengkap termasuk poskod dan negeri"
               />
-              {errors.address && <span className="text-red-500 text-sm">{errors.address.message}</span>}
+              {errors.address && (
+                <div className="mt-2 flex items-center text-red-600 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.address.message}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block mb-1">No. Telefon</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                No. Telefon <span className="text-red-500">*</span>
+              </label>
               <input
                 type="tel"
                 {...register('phoneNumber', { 
@@ -1208,14 +1358,24 @@ const memoizedExistingBookings = useMemo(() => {
                     message: 'Format no. telefon tidak sah (8-15 digit, boleh guna +, -, (), spasi)'
                   }
                 })}
-                className="w-full p-2 border rounded"
-                placeholder="cth: 012-345-6789"
+                className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
+                placeholder="012-345-6789"
+                inputMode="tel"
               />
-              {errors.phoneNumber && <span className="text-red-500 text-sm">{errors.phoneNumber.message}</span>}
+              {errors.phoneNumber && (
+                <div className="mt-2 flex items-center text-red-600 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.phoneNumber.message}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block mb-1">Alamat Emel</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Alamat Emel <span className="text-red-500">*</span>
+              </label>
               <input
                 type="email"
                 {...register('email', { 
@@ -1225,18 +1385,26 @@ const memoizedExistingBookings = useMemo(() => {
                     message: 'Format email tidak sah'
                   }
                 })}
-                className="w-full p-2 border rounded"
-                placeholder="cth: nama@email.com"
+                className="w-full p-3 sm:p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
+                placeholder="nama@email.com"
+                inputMode="email"
               />
-              {errors.email && <span className="text-red-500 text-sm">{errors.email.message}</span>}
+              {errors.email && (
+                <div className="mt-2 flex items-center text-red-600 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.email.message}
+                </div>
+              )}
             </div>
           </div>
               
-              <div className="mt-6 flex justify-end">
+              <div className="mt-8 sm:mt-10">
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="flex items-center bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                  className="w-full sm:w-auto sm:ml-auto sm:flex bg-blue-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all duration-200 font-medium text-base sm:text-lg flex items-center justify-center shadow-lg hover:shadow-xl"
                 >
                   <span>Seterusnya</span>
                   <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1706,10 +1874,10 @@ const memoizedExistingBookings = useMemo(() => {
                   <div className="text-4xl">📎</div>
                   <div>
                     <p className="text-lg font-medium text-gray-700">
-                      Klik untuk muat naik atau seret fail ke sini
+                      Klik untuk muat naik dokumen berkaitan
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      PDF, DOC, DOCX, gambar hingga 10MB
+                      PDF, DOC, DOCX, JPEG, PNG, GIF (Maksimum: 10MB setiap fail)
                     </p>
                   </div>
                   <button
@@ -2054,37 +2222,327 @@ const memoizedExistingBookings = useMemo(() => {
                   </svg>
                   <span>Kembali</span>
                 </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            onClick={() => {
-              console.log('Submit button clicked!');
-              console.log('Active step:', activeStep);
-              console.log('Is submitting:', isSubmitting);
-              console.log('Booking data:', bookingData);
-              console.log('Selected date:', selectedDate);
-            }}
-                  className="flex items-center bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
-          >
-                  {isSubmitting ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                      Menghantar...
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="flex items-center bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                >
+                  <span>Seterusnya</span>
+                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                  </svg>
+                </button>
+              </div>
+        </section>
+
+        {/* Bukti Pembayaran - Reused from status page */}
+        <section className={`bg-white rounded-lg shadow-md overflow-hidden ${activeStep !== 5 ? 'hidden' : ''}`}>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Muat Naik Bukti Pembayaran
+            </h2>
+            <p className="text-blue-100 mt-1">
+              Sila muat naik bukti pembayaran untuk mengesahkan tempahan anda.
+            </p>
+          </div>
+
+          <div className="p-6">
+            {/* Payment Information */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-3">💳 Maklumat Pembayaran</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-blue-800 mb-2">Maklumat Bank:</h4>
+                  <div className="space-y-1 text-sm text-blue-700">
+                    <p><strong>Bank:</strong> CIMB Bank</p>
+                    <p><strong>No. Akaun:</strong> 8006326050</p>
+                    <p><strong>Nama:</strong> Perbadanan Kemajuan Ekonomi Negeri Perlis</p>
+                    <p><strong>Jumlah:</strong> <span className="text-lg font-bold text-green-600">RM {(() => {
+                      if (totalPrice === 0) {
+                        let calculatedTotal = 0;
+                        if (startTimeForm && endTime && facilityData?.rates) {
+                          const parseTimeToMinutes = (timeString: string): number => {
+                            const [hours, minutes] = timeString.split(':').map(Number);
+                            return hours * 60 + minutes;
+                          };
+                          const startMinutes = parseTimeToMinutes(startTimeForm);
+                          const endMinutes = parseTimeToMinutes(endTime);
+                          const hours = Math.ceil((endMinutes - startMinutes) / 60);
+                          if (hours > 0) {
+                            const hourlyRate = facilityData.rates.hourlyRate || 50;
+                            calculatedTotal += hours * hourlyRate;
+                          }
+                        }
+                        if (peralatanTambahan && facilityData?.equipmentRates) {
+                          Object.entries(facilityData.equipmentRates).forEach(([equipment, rate]) => {
+                            const equipmentKey = equipment.toLowerCase().replace(/\s+/g, '');
+                            if (peralatanTambahan[equipmentKey]) {
+                              calculatedTotal += rate;
+                            }
+                          });
+                        }
+                        if (mineralWater > 0) {
+                          calculatedTotal += mineralWater * 1.00;
+                        }
+                        if (bilanganKehadiran > 0 && foodOptions) {
+                          let foodCount = 0;
+                          if (foodOptions.breakfast) foodCount++;
+                          if (foodOptions.lunch) foodCount++;
+                          if (foodOptions.dinner) foodCount++;
+                          if (foodOptions.supper) foodCount++;
+                          if (foodCount > 0) {
+                            calculatedTotal += bilanganKehadiran * 10 * foodCount;
+                          }
+                        }
+                        return calculatedTotal.toFixed(2);
+                      }
+                      return totalPrice.toFixed(2);
+                    })()}</span></p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-blue-800 mb-2">Kod QR untuk Pembayaran:</p>
+                  <div className="flex justify-center">
+                    <div 
+                      className="cursor-pointer transition-transform hover:scale-105"
+                      onClick={() => setShowQRModal(true)}
+                      title="Klik untuk melihat QR kod yang lebih besar"
+                    >
+                      <Image
+                        width={160}
+                        height={160}
+                        src="/qr.png" 
+                        alt="QR Code untuk Pembayaran" 
+                        className="border-2 border-blue-300 rounded-lg"
+                      />
                     </div>
-                  ) : (
-                    <>
-                      Hantar Permohonan
-                      <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Imbas kod QR untuk pembayaran pantas
+                    <br />
+                    <span className="text-blue-500 underline cursor-pointer">Klik untuk melihat saiz yang lebih besar</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Upload Error */}
+            {uploadError && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-red-800">{uploadError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* File Upload */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pilih Bukti Pembayaran <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,application/pdf"
+                  onChange={handleFileUpload}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Format yang diterima: JPG, PNG, PDF (Maksimum 5MB)
+                </p>
+              </div>
+
+              {uploadFile && (
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                    </>
-                  )}
-          </button>
-        </div>
-            </section>
+                      <span className="text-sm text-gray-700">{uploadFile.name}</span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setUploadFile(null)}
+                      className="text-red-500 hover:text-red-700"
+                      type="button"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Important Notes */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-yellow-800 font-semibold mb-2">⚠️ Penting:</h4>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  <li>• Pastikan bukti pembayaran jelas dan lengkap</li>
+                  <li>• Jumlah pembayaran mesti tepat dengan jumlah yang dinyatakan</li>
+                  <li>• Tempahan akan disahkan setelah bukti pembayaran diterima</li>
+                  <li>• Anda akan menerima email pengesahan setelah tempahan diproses</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-between">
+              <button
+                type="button"
+                onClick={prevStep}
+                className="flex items-center bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400 transition-colors"
+              >
+                <svg className="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                </svg>
+                <span>Kembali</span>
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !uploadFile}
+                onClick={() => {
+                  console.log('Submit button clicked!');
+                  console.log('Active step:', activeStep);
+                  console.log('Is submitting:', isSubmitting);
+                  console.log('Booking data:', bookingData);
+                  console.log('Selected date:', selectedDate);
+                  console.log('Upload file:', uploadFile);
+                }}
+                className="flex items-center bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    Menghantar...
+                  </div>
+                ) : (
+                  <>
+                    Hantar Permohonan & Bukti Pembayaran
+                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </section>
           </>
         )}
       </form>
+
+      {/* QR Code Modal - Reused from status page */}
+      {showQRModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowQRModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Kod QR Pembayaran</h3>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <Image
+                  width={280}
+                  height={280}
+                  src="/qr.png" 
+                  alt="QR Code untuk Pembayaran - Saiz Besar" 
+                  className="border-2 border-blue-300 rounded-lg"
+                />
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-900 mb-2">Maklumat Pembayaran</h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p><strong>Bank:</strong> CIMB Bank</p>
+                  <p><strong>No. Akaun:</strong> 8006326050</p>
+                  <p><strong>Nama:</strong> Perbadanan Kemajuan Ekonomi Negeri Perlis</p>
+                  <p><strong>Jumlah:</strong> <span className="text-lg font-bold text-green-600">RM {(() => {
+                    if (totalPrice === 0) {
+                      let calculatedTotal = 0;
+                      if (startTimeForm && endTime && facilityData?.rates) {
+                        const parseTimeToMinutes = (timeString: string): number => {
+                          const [hours, minutes] = timeString.split(':').map(Number);
+                          return hours * 60 + minutes;
+                        };
+                        const startMinutes = parseTimeToMinutes(startTimeForm);
+                        const endMinutes = parseTimeToMinutes(endTime);
+                        const hours = Math.ceil((endMinutes - startMinutes) / 60);
+                        if (hours > 0) {
+                          const hourlyRate = facilityData.rates.hourlyRate || 50;
+                          calculatedTotal += hours * hourlyRate;
+                        }
+                      }
+                      if (peralatanTambahan && facilityData?.equipmentRates) {
+                        Object.entries(facilityData.equipmentRates).forEach(([equipment, rate]) => {
+                          const equipmentKey = equipment.toLowerCase().replace(/\s+/g, '');
+                          if (peralatanTambahan[equipmentKey]) {
+                            calculatedTotal += rate;
+                          }
+                        });
+                      }
+                      if (mineralWater > 0) {
+                        calculatedTotal += mineralWater * 1.00;
+                      }
+                      if (bilanganKehadiran > 0 && foodOptions) {
+                        let foodCount = 0;
+                        if (foodOptions.breakfast) foodCount++;
+                        if (foodOptions.lunch) foodCount++;
+                        if (foodOptions.dinner) foodCount++;
+                        if (foodOptions.supper) foodCount++;
+                        if (foodCount > 0) {
+                          calculatedTotal += bilanganKehadiran * 10 * foodCount;
+                        }
+                      }
+                      return calculatedTotal.toFixed(2);
+                    }
+                    return totalPrice.toFixed(2);
+                  })()}</span></p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Imbas kod QR ini dengan aplikasi perbankan anda untuk membuat pembayaran dengan mudah.
+              </p>
+              
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

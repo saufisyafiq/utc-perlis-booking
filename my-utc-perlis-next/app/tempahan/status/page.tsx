@@ -45,6 +45,11 @@ function BookingStatusContent() {
   // QR code modal state
   const [showQRModal, setShowQRModal] = useState(false);
 
+  // Print function
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Auto-populate from URL params
   useEffect(() => {
     const emailParam = searchParams.get('email');
@@ -210,10 +215,77 @@ function BookingStatusContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      <style jsx global>{`
+        @media print {
+          /* Hide all elements by default */
+          body * {
+            visibility: hidden;
+          }
+          
+          /* Hide navigation and footer specifically */
+          nav, header, footer {
+            display: none !important;
+          }
+          
+          /* Show only booking details */
+          .booking-details, .booking-details * {
+            visibility: visible;
+          }
+          
+          /* Position booking details for print */
+          .booking-details {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 20px !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: white !important;
+          }
+          
+          /* Hide elements with no-print class */
+          .no-print {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Show elements with print-only class */
+          .print-only {
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          /* Clean up print layout */
+          .booking-details .bg-gradient-to-r {
+            background: white !important;
+            color: black !important;
+          }
+          
+          .booking-details .text-white {
+            color: black !important;
+          }
+          
+          .booking-details .text-blue-100 {
+            color: #666 !important;
+          }
+          
+          /* Ensure proper page breaks */
+          .booking-details {
+            page-break-inside: avoid;
+          }
+        }
+        
+        .print-only {
+          display: none;
+        }
+      `}</style>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 no-print">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {searchParams.get('booking') ? 'Muat Naik Bukti Pembayaran' : 'Semak Status Tempahan'}
           </h1>
@@ -226,7 +298,7 @@ function BookingStatusContent() {
         </div>
 
         {/* Search Form */}
-        <div className="bg-card rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-card rounded-lg shadow-md p-6 mb-8 no-print">
           <form onSubmit={searchBooking} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -277,7 +349,7 @@ function BookingStatusContent() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6 no-print">
             <div className="flex">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -291,7 +363,7 @@ function BookingStatusContent() {
 
         {/* Booking Details */}
         {booking && (
-          <div className="bg-card rounded-lg shadow-md overflow-hidden">
+          <div className="bg-card rounded-lg shadow-md overflow-hidden booking-details">
             {/* Header with Status */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -463,13 +535,25 @@ function BookingStatusContent() {
 
               {/* Action Buttons */}
               {booking.bookingStatus === 'APPROVED' && (
-                <div className="mt-6 pt-4 border-t flex space-x-3">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Muat Turun Surat Kelulusan
+                <div className="mt-6 pt-4 border-t flex space-x-3 no-print">
+                  <button 
+                    onClick={handlePrint}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Cetak Maklumat Tempahan
                   </button>
-                  <button className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                  <a 
+                    href="tel:049705310"
+                    className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
                     Hubungi Pentadbiran
-                  </button>
+                  </a>
                 </div>
               )}
             </div>
@@ -478,7 +562,7 @@ function BookingStatusContent() {
 
         {/* Payment Upload Section */}
         {booking && (booking.bookingStatus === 'AWAITING PAYMENT' || booking.bookingStatus === 'AWAITING_PAYMENT') && (
-          <div className="mt-8 bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="mt-8 bg-white rounded-lg shadow-md overflow-hidden no-print">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
               <h2 className="text-xl font-semibold text-white flex items-center">
                 <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -640,7 +724,7 @@ function BookingStatusContent() {
 
         {/* Review Payment Status */}
         {booking && (booking.bookingStatus === 'REVIEW PAYMENT' || booking.bookingStatus === 'REVIEW_PAYMENT') && (
-          <div className="mt-8 bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="mt-8 bg-white rounded-lg shadow-md overflow-hidden no-print">
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
               <h2 className="text-xl font-semibold text-white flex items-center">
                 <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -664,7 +748,7 @@ function BookingStatusContent() {
         )}
 
         {/* Help Section */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6">
+        <div className="mt-8 bg-blue-50 rounded-lg p-6 no-print">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
             Perlukan Bantuan?
           </h3>
@@ -674,7 +758,7 @@ function BookingStatusContent() {
           </p>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             <a
-              href="tel:04-9705310"
+              href="tel:049705310"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -697,7 +781,7 @@ function BookingStatusContent() {
         {/* QR Code Modal */}
         {showQRModal && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print"
             onClick={() => setShowQRModal(false)}
           >
             <div 
@@ -753,8 +837,9 @@ function BookingStatusContent() {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
