@@ -48,15 +48,23 @@ const Footer = () => {
 
           {/* PKENPs Information (Placeholder) */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Perbadanan Kemajuan Ekonomi Negeri Perlis (PKENPS)</h3>
+            <h3 className="text-lg font-semibold mb-4">Perbadanan Kemajuan Ekonomi Negeri Perlis</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <FaMapMarkerAlt className="text-blue-400 mt-1 flex-shrink-0" />
-                <p>193, Jalan Raja Syed Alwi, Taman Perlis, 01000 Kangar, Perlis</p>
+                <div>
+                  <p>No 173-191 Jalan Raja Syed Alwi</p>
+                  <p>Taman Kemajuan 01000 Kangar Perlis</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <FaPhone className="text-blue-400" />
-                <p>04-976 1088</p>
+              <div className="flex items-start gap-3">
+                <FaPhone className="text-blue-400 mt-1 flex-shrink-0" />
+                <div>
+                  <p>
+                    Tel: <span className="whitespace-nowrap">60 4 9761088</span> | <span className="whitespace-nowrap">9761037</span> | <span className="whitespace-nowrap">9761616</span>
+                  </p>
+                  <p>Fax: <span className="whitespace-nowrap">60 4 9762181</span></p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <FaEnvelope className="text-blue-400" />
