@@ -3,7 +3,7 @@ services:
   # Next.js Frontend
   nextjs:
     build:
-      context: ./my-utc-perlis-next
+      context: .
       dockerfile: Dockerfile
     environment:
       NEXT_PUBLIC_STRAPI_API_URL: ${NEXT_PUBLIC_STRAPI_API_URL}
