@@ -675,16 +675,33 @@ function SportBookingFormContent() {
                       </div>
                     )}
 
-                    <SimpleBookingSelector
-                      facilityRates={memoizedFacilityRates}
-                      facilityId={facilityData.documentId}
-                      supportsHourlyBooking={supportsHourlyBooking}
-                      minimumDuration={facilityData.minimumDuration || 2}
-                      onBookingChange={handleBookingChange}
-                      selectedDate={selectedDate}
-                      onDateChange={setSelectedDate}
-                      existingBookings={memoizedExistingBookings}
-                    />
+                    {/* Date Selection */}
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-3">Pilih Tarikh</h4>
+                      <AvailabilityCalendar
+                        facilityId={facilityId || ''}
+                        selectedStartDate={selectedDate}
+                        selectedEndDate={null}
+                        onDateSelect={(date, availability) => {
+                          setSelectedDate(date);
+                          setDateAvailability(availability);
+                        }}
+                      />
+                    </div>
+
+                    {/* Time Selection - only show when date is selected */}
+                    {selectedDate && (
+                      <div className="mb-6">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Pilih Masa</h4>
+                        <SimpleBookingSelector
+                          facilityRates={memoizedFacilityRates}
+                          facilityCapacity={facilityData.capacity}
+                          onBookingChange={handleBookingChange}
+                          selectedDate={selectedDate}
+                          existingBookings={memoizedExistingBookings}
+                        />
+                      </div>
+                    )}
 
                     {bookingData && bookingData.isValid && (
                       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
