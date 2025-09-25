@@ -7,7 +7,6 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import AvailabilityCalendar from '../../components/AvailabilityCalendar';
 import SimpleBookingSelector from '../../components/SimpleBookingSelector';
-import { SimpleBookingLogic } from '../../lib/simple-booking-logic';
 import { SportPricingLogic, SportRates } from '../../lib/sport-pricing-logic';
 import { getStrapiApiUrl, buildStrapiUrl, buildStrapiMediaUrl, validateConfig } from '../../../lib/config';
 
@@ -198,6 +197,12 @@ function SportBookingFormContent() {
     }));
   }, [dateAvailability?.bookedTimeSlots]);
 
+  // Helper function to parse time to minutes
+  const parseTimeToMinutes = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   // Calculate price using sport pricing logic
   const calculatePrice = useCallback(() => {
     if (!bookingData || !facilityData) {
@@ -222,20 +227,16 @@ function SportBookingFormContent() {
         setTotalPrice(sportPricing.totalPrice);
         setPriceBreakdown(sportPricing.breakdown.rateBreakdown);
       } else {
-        // Fallback to regular pricing logic
-        const pricing = SimpleBookingLogic.calculatePricing(
-          {
-            startDate: bookingData.startDate,
-            endDate: bookingData.endDate,
-            startTime: bookingData.startTime,
-            endTime: bookingData.endTime
-          },
-          memoizedFacilityRates,
-          0 // No equipment cost for sports
-        );
-
-        setTotalPrice(pricing.totalPrice);
-        const breakdown = `${pricing.breakdown.duration} jam @ RM${(pricing.breakdown.basePrice / pricing.breakdown.duration).toFixed(2)}/jam`;
+        // Fallback to simple hourly calculation for sports
+        const startMinutes = parseTimeToMinutes(bookingData.startTime);
+        const endMinutes = parseTimeToMinutes(bookingData.endTime);
+        const hours = Math.ceil((endMinutes - startMinutes) / 60);
+        
+        const hourlyRate = memoizedFacilityRates.hourlyRate || 50;
+        const totalPrice = hours * hourlyRate;
+        
+        setTotalPrice(totalPrice);
+        const breakdown = `${hours} jam @ RM${hourlyRate}/jam`;
         setPriceBreakdown(breakdown);
       }
     } catch (error) {
