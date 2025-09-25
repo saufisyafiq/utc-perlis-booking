@@ -220,10 +220,15 @@ const handleBookingChange = useCallback((booking: any) => {
 
 // Memoize facility rates to prevent object recreation
 const memoizedFacilityRates = useMemo(() => ({
-  hourlyRate: facilityData?.rates?.hourlyRate || 50,
+  hourlyRate: facilityData?.rates?.hourlyRate || 0, // Use 0 instead of fallback if not available
   halfDayRate: facilityData?.rates?.halfDayRate || 250,
   fullDayRate: facilityData?.rates?.fullDayRate || 400
 }), [facilityData?.rates?.hourlyRate, facilityData?.rates?.halfDayRate, facilityData?.rates?.fullDayRate]);
+
+// Check if facility supports hourly bookings
+const supportsHourlyBooking = useMemo(() => {
+  return facilityData?.rates?.hourlyRate && facilityData.rates.hourlyRate > 0;
+}, [facilityData?.rates?.hourlyRate]);
 
 // Memoize existing bookings to prevent array recreation
 const memoizedExistingBookings = useMemo(() => {
@@ -354,19 +359,30 @@ const memoizedExistingBookings = useMemo(() => {
         const hours = Math.ceil((endMinutes - startMinutes) / 60);
         
         if (hours > 0) {
-        const hourlyRate = facilityData.rates?.hourlyRate || 50;
-          const basePrice = hours * hourlyRate;
-        let equipmentPrice = 0;
-        
-        selectedEquipment.forEach(equipment => {
-          const rate = facilityData.equipmentRates?.[equipment] || 0;
-          equipmentPrice += rate;
-        });
-        
-        const totalFallback = basePrice + equipmentPrice + waterCost + foodCost;
-        setTotalPrice(totalFallback);
-        
-          const fallbackBreakdown = [`Sewa Fasiliti (${hours} jam): RM${basePrice}`];
+          let basePrice = 0;
+          // Only calculate hourly rate if facility supports it
+          if (!supportsHourlyBooking) {
+            // For facilities without hourly rates, use half-day or full-day rates
+            basePrice = hours >= 8 ? facilityData.rates?.fullDayRate || 400 : facilityData.rates?.halfDayRate || 250;
+          } else {
+            const hourlyRate = facilityData.rates?.hourlyRate || 50;
+            basePrice = hours * hourlyRate;
+          }
+          
+          let equipmentPrice = 0;
+          
+          selectedEquipment.forEach(equipment => {
+            const rate = facilityData.equipmentRates?.[equipment] || 0;
+            equipmentPrice += rate;
+          });
+          
+          const totalFallback = basePrice + equipmentPrice + waterCost + foodCost;
+          setTotalPrice(totalFallback);
+          
+          const packageTypeText = !supportsHourlyBooking 
+            ? (hours >= 8 ? 'satu hari' : 'separuh hari')
+            : `${hours} jam`;
+          const fallbackBreakdown = [`Sewa Fasiliti (${packageTypeText}): RM${basePrice}`];
         if (equipmentPrice > 0) {
           fallbackBreakdown.push(`Peralatan: RM${equipmentPrice}`);
         }
@@ -655,8 +671,14 @@ const memoizedExistingBookings = useMemo(() => {
           const hours = Math.ceil((endMinutes - startMinutes) / 60);
           
           if (hours > 0) {
-            const hourlyRate = facilityData.rates.hourlyRate || 50;
-            calculatedTotal += hours * hourlyRate;
+            if (supportsHourlyBooking) {
+              const hourlyRate = facilityData.rates.hourlyRate!;
+              calculatedTotal += hours * hourlyRate;
+            } else {
+              // Use package rates for facilities without hourly rates
+              const packageRate = hours >= 8 ? facilityData.rates.fullDayRate : facilityData.rates.halfDayRate;
+              calculatedTotal += packageRate || 0;
+            }
           }
         }
         
@@ -1181,11 +1203,13 @@ const memoizedExistingBookings = useMemo(() => {
               
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="text-sm font-semibold uppercase text-blue-700 mb-2">Kadar Sewaan</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-card p-3 rounded border border-blue-100 text-center">
-                    <div className="text-xs text-gray-500 mb-1">Per Jam</div>
-                    <div className="font-bold text-blue-600">RM {facilityData.rates.hourlyRate}</div>
-                  </div>
+                <div className={`grid gap-3 ${facilityData.rates.hourlyRate && facilityData.rates.hourlyRate > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {facilityData.rates.hourlyRate && facilityData.rates.hourlyRate > 0 && (
+                    <div className="bg-card p-3 rounded border border-blue-100 text-center">
+                      <div className="text-xs text-gray-500 mb-1">Per Jam</div>
+                      <div className="font-bold text-blue-600">RM {facilityData.rates.hourlyRate}</div>
+                    </div>
+                  )}
                   <div className="bg-card p-3 rounded border border-blue-100 text-center">
                     <div className="text-xs text-gray-500 mb-1">Separuh Hari</div>
                     <div className="font-bold text-blue-600">RM {facilityData.rates.halfDayRate}</div>
@@ -1195,6 +1219,11 @@ const memoizedExistingBookings = useMemo(() => {
                     <div className="font-bold text-blue-600">RM {facilityData.rates.fullDayRate}</div>
                   </div>
                 </div>
+                {(!facilityData.rates.hourlyRate || facilityData.rates.hourlyRate <= 0) && (
+                  <div className="mt-2 text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                    📋 Fasiliti ini hanya tersedia untuk tempahan separuh hari atau satu hari penuh
+                  </div>
+                )}
               </div>
             </div>
             {(() => {
@@ -1506,9 +1535,9 @@ const memoizedExistingBookings = useMemo(() => {
                   )}
                 </div>
                 
-                {/* Time slot selection - only for single-day bookings */}
+                {/* Time slot selection - only for single-day bookings and facilities with hourly rates */}
                 <div>
-                  {selectedDate && dateAvailability && !selectedEndDate && (
+                  {selectedDate && dateAvailability && !selectedEndDate && supportsHourlyBooking && (
                     <SimpleBookingSelector
                       selectedDate={selectedDate}
                       existingBookings={memoizedExistingBookings}
@@ -1516,6 +1545,127 @@ const memoizedExistingBookings = useMemo(() => {
                       facilityCapacity={facilityData?.capacity || 100}
                       onBookingChange={handleBookingChange}
                     />
+                  )}
+                  
+                  {/* Show package selector for facilities without hourly rates */}
+                  {selectedDate && dateAvailability && !selectedEndDate && !supportsHourlyBooking && (
+                    <div className="bg-card rounded-lg border border-border p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Pilihan Tempahan Tersedia
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                          <h4 className="font-medium text-orange-800 mb-2">📋 Fasiliti Khusus</h4>
+                          <p className="text-sm text-orange-700 mb-3">
+                            Fasiliti ini hanya tersedia untuk tempahan separuh hari atau satu hari penuh.
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Set half day booking (8am-2pm or 2pm-10pm)
+                                setValue('startTime', '08:00');
+                                setValue('endTime', '14:00');
+                                setValue('packageType', 'HALF_DAY');
+                                setStartTime('08:00');
+                                setSelectedDuration(6);
+                                
+                                const halfDayBooking = {
+                                  startDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  endDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  startTime: '08:00',
+                                  endTime: '14:00',
+                                  attendance: bilanganKehadiran || 1,
+                                  facilityCapacity: facilityData?.capacity || 100,
+                                  isValid: true,
+                                  price: facilityData?.rates?.halfDayRate || 250,
+                                  packageType: 'SEPARUH_HARI'
+                                };
+                                setBookingData(halfDayBooking);
+                                console.log('Half day booking selected:', halfDayBooking);
+                              }}
+                              className="bg-blue-100 hover:bg-blue-200 text-blue-800 p-3 rounded-lg transition-colors text-left"
+                            >
+                              <div className="font-semibold">Separuh Hari (Pagi)</div>
+                              <div className="text-sm">8:00 AM - 2:00 PM</div>
+                              <div className="text-xs font-medium mt-1">RM {facilityData?.rates?.halfDayRate || 250}</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Set half day booking (2pm-10pm)
+                                setValue('startTime', '14:00');
+                                setValue('endTime', '22:00');
+                                setValue('packageType', 'HALF_DAY');
+                                setStartTime('14:00');
+                                setSelectedDuration(8);
+                                
+                                const halfDayBooking = {
+                                  startDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  endDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  startTime: '14:00',
+                                  endTime: '22:00',
+                                  attendance: bilanganKehadiran || 1,
+                                  facilityCapacity: facilityData?.capacity || 100,
+                                  isValid: true,
+                                  price: facilityData?.rates?.halfDayRate || 250,
+                                  packageType: 'SEPARUH_HARI'
+                                };
+                                setBookingData(halfDayBooking);
+                                console.log('Half day booking selected:', halfDayBooking);
+                              }}
+                              className="bg-blue-100 hover:bg-blue-200 text-blue-800 p-3 rounded-lg transition-colors text-left"
+                            >
+                              <div className="font-semibold">Separuh Hari (Petang)</div>
+                              <div className="text-sm">2:00 PM - 10:00 PM</div>
+                              <div className="text-xs font-medium mt-1">RM {facilityData?.rates?.halfDayRate || 250}</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Set full day booking
+                                setValue('startTime', '08:00');
+                                setValue('endTime', '22:00');
+                                setValue('packageType', 'FULL_DAY');
+                                setStartTime('08:00');
+                                setSelectedDuration(14);
+                                
+                                const fullDayBooking = {
+                                  startDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  endDate: format(selectedDate, 'yyyy-MM-dd'),
+                                  startTime: '08:00',
+                                  endTime: '22:00',
+                                  attendance: bilanganKehadiran || 1,
+                                  facilityCapacity: facilityData?.capacity || 100,
+                                  isValid: true,
+                                  price: facilityData?.rates?.fullDayRate || 400,
+                                  packageType: 'SEHARI'
+                                };
+                                setBookingData(fullDayBooking);
+                                console.log('Full day booking selected:', fullDayBooking);
+                              }}
+                              className="bg-green-100 hover:bg-green-200 text-green-800 p-3 rounded-lg transition-colors text-left sm:col-span-2"
+                            >
+                              <div className="font-semibold">Satu Hari Penuh</div>
+                              <div className="text-sm">8:00 AM - 10:00 PM</div>
+                              <div className="text-xs font-medium mt-1">RM {facilityData?.rates?.fullDayRate || 400}</div>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Show selected booking info */}
+                        {bookingData?.isValid && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h4 className="font-medium text-green-800 mb-2">✅ Tempahan Dipilih</h4>
+                            <div className="text-sm text-green-700 space-y-1">
+                              <div>📅 Tarikh: {format(selectedDate, 'dd MMMM yyyy')}</div>
+                              <div>⏰ Masa: {bookingData.startTime} - {bookingData.endTime}</div>
+                              <div>💰 Harga: RM {bookingData.price}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
                   
                   {/* Multi-day booking info */}
@@ -2106,27 +2256,77 @@ const memoizedExistingBookings = useMemo(() => {
                         // Fallback: show detailed breakdown if available
                         const breakdownItems: React.ReactElement[] = [];
                         
-                        // Add facility cost breakdown - using backend logic
+                        // Add facility cost breakdown - using the same accurate pricing engine as Step 4
                         if (startTimeForm && endTime && facilityData?.rates) {
-                          // Parse times to minutes (same as backend)
-                          const parseTimeToMinutes = (timeString: string): number => {
-                            const [hours, minutes] = timeString.split(':').map(Number);
-                            return hours * 60 + minutes;
-                          };
-                          
-                          const startMinutes = parseTimeToMinutes(startTimeForm);
-                          const endMinutes = parseTimeToMinutes(endTime);
-                          const hours = Math.ceil((endMinutes - startMinutes) / 60);
-                          
-                          if (hours > 0) {
-                            const hourlyRate = facilityData.rates.hourlyRate || 50;
-                            const facilityCost = hours * hourlyRate;
-                            breakdownItems.push(
-                              <div key="facility" className="flex justify-between text-sm py-1">
-                                <span className="text-gray-600">Sewa Fasiliti ({hours} jam)</span>
-                                <span className="font-medium text-gray-900">RM{facilityCost}</span>
-                              </div>
+                          try {
+                            const { createPricingEngine } = require('../lib/pricing-engine');
+                            const pricingEngine = createPricingEngine(facilityData);
+                            
+                            const result = pricingEngine.calculateOptimalPricing(
+                              startDate || new Date().toISOString().split('T')[0],
+                              endDate || new Date().toISOString().split('T')[0],
+                              startTimeForm,
+                              endTime,
+                              [] // No equipment here, added separately below
                             );
+                            
+                            // Add each facility breakdown item
+                            result.breakdown
+                              .filter((item: any) => item.type === 'FACILITY')
+                              .forEach((item: any, index: number) => {
+                                const description = item.quantity > 1 
+                                  ? `${item.description}: RM${item.unitPrice} × ${item.quantity}`
+                                  : item.description;
+                                
+                                breakdownItems.push(
+                                  <div key={`facility-${index}`} className="flex justify-between text-sm py-1">
+                                    <span className="text-gray-600">{description}</span>
+                                    <span className="font-medium text-gray-900">RM{item.totalPrice.toFixed(2)}</span>
+                                  </div>
+                                );
+                              });
+                            
+                            // Add savings note if applicable
+                            if (result.savings && result.savings > 0) {
+                              breakdownItems.push(
+                                <div key="savings" className="bg-yellow-50 border border-yellow-200 rounded p-2 text-sm">
+                                  <span className="text-yellow-800 font-medium">💰 Jimat: RM{result.savings.toFixed(2)} (berbanding kadar per jam)</span>
+                                </div>
+                              );
+                            }
+                          } catch (error) {
+                            console.error('Error using pricing engine:', error);
+                            // Fallback to original logic if pricing engine fails
+                            const parseTimeToMinutes = (timeString: string): number => {
+                              const [hours, minutes] = timeString.split(':').map(Number);
+                              return hours * 60 + minutes;
+                            };
+                            
+                            const startMinutes = parseTimeToMinutes(startTimeForm);
+                            const endMinutes = parseTimeToMinutes(endTime);
+                            const hours = Math.ceil((endMinutes - startMinutes) / 60);
+                            
+                            if (hours > 0) {
+                              let facilityCost = 0;
+                              let description = '';
+                              
+                              if (supportsHourlyBooking) {
+                                const hourlyRate = facilityData.rates.hourlyRate!;
+                                facilityCost = hours * hourlyRate;
+                                description = `Sewa Fasiliti (${hours} jam)`;
+                              } else {
+                                const packageRate = hours >= 8 ? facilityData.rates.fullDayRate : facilityData.rates.halfDayRate;
+                                facilityCost = packageRate || 0;
+                                description = `Sewa Fasiliti (${hours >= 8 ? 'satu hari' : 'separuh hari'})`;
+                              }
+                              
+                              breakdownItems.push(
+                                <div key="facility" className="flex justify-between text-sm py-1">
+                                  <span className="text-gray-600">{description}</span>
+                                  <span className="font-medium text-gray-900">RM{facilityCost}</span>
+                                </div>
+                              );
+                            }
                           }
                         }
                         
@@ -2272,8 +2472,13 @@ const memoizedExistingBookings = useMemo(() => {
                           const endMinutes = parseTimeToMinutes(endTime);
                           const hours = Math.ceil((endMinutes - startMinutes) / 60);
                           if (hours > 0) {
-                            const hourlyRate = facilityData.rates.hourlyRate || 50;
-                            calculatedTotal += hours * hourlyRate;
+                            if (supportsHourlyBooking) {
+                              const hourlyRate = facilityData.rates.hourlyRate!;
+                              calculatedTotal += hours * hourlyRate;
+                            } else {
+                              const packageRate = hours >= 8 ? facilityData.rates.fullDayRate : facilityData.rates.halfDayRate;
+                              calculatedTotal += packageRate || 0;
+                            }
                           }
                         }
                         if (peralatanTambahan && facilityData?.equipmentRates) {
@@ -2493,8 +2698,13 @@ const memoizedExistingBookings = useMemo(() => {
                         const endMinutes = parseTimeToMinutes(endTime);
                         const hours = Math.ceil((endMinutes - startMinutes) / 60);
                         if (hours > 0) {
-                          const hourlyRate = facilityData.rates.hourlyRate || 50;
-                          calculatedTotal += hours * hourlyRate;
+                          if (supportsHourlyBooking) {
+                            const hourlyRate = facilityData.rates.hourlyRate!;
+                            calculatedTotal += hours * hourlyRate;
+                          } else {
+                            const packageRate = hours >= 8 ? facilityData.rates.fullDayRate : facilityData.rates.halfDayRate;
+                            calculatedTotal += packageRate || 0;
+                          }
                         }
                       }
                       if (peralatanTambahan && facilityData?.equipmentRates) {

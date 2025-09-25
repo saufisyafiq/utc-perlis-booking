@@ -64,8 +64,61 @@ export default function SimpleBookingSelector({
   // Calculate pricing when validation changes or rates change
   useEffect(() => {
     if (validationResult?.isValid) {
-      const currentPricing = SimpleBookingLogic.calculatePricing(bookingRequest, facilityRates, equipmentCost);
-      setPricing(currentPricing);
+      try {
+        // Use the same accurate pricing engine as Step 2 and Step 4
+        const { createPricingEngine } = require('../lib/pricing-engine');
+        const pricingEngine = createPricingEngine({
+          rates: facilityRates,
+          equipmentRates: {} // Equipment handled separately
+        });
+        
+        const result = pricingEngine.calculateOptimalPricing(
+          bookingRequest.startDate,
+          bookingRequest.endDate,
+          bookingRequest.startTime,
+          bookingRequest.endTime,
+          [] // No equipment in this calculation
+        );
+        
+        // Convert pricing-engine result to SimpleBookingLogic format for compatibility
+        const facilityTotal = result.breakdown
+          .filter((item: any) => item.type === 'FACILITY')
+          .reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+        
+        // Calculate duration manually
+        const timeToMinutes = (time: string): number => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        const duration = Math.ceil((timeToMinutes(bookingRequest.endTime) - timeToMinutes(bookingRequest.startTime)) / 60);
+        
+        const currentPricing = {
+          totalPrice: facilityTotal + equipmentCost,
+          breakdown: {
+            basePrice: facilityTotal,
+            duration: duration,
+            packageType: (result.breakdown.length > 1 ? 'SEPARUH_HARI' : 
+              (facilityTotal === facilityRates.fullDayRate ? 'SEHARI' : 
+               (facilityTotal === facilityRates.halfDayRate ? 'SEPARUH_HARI' : 'PER_JAM'))) as 'PER_JAM' | 'SEPARUH_HARI' | 'SEHARI' | 'MULTI_DAY',
+            equipmentCost,
+            detailedBreakdown: result.breakdown
+              .filter((item: any) => item.type === 'FACILITY')
+              .map((item: any) => 
+                item.quantity > 1 
+                  ? `${item.description}: RM${item.unitPrice} × ${item.quantity} = RM${item.totalPrice}`
+                  : `${item.description}: RM${item.totalPrice}`
+              ).join(' + '),
+            savings: result.savings
+          }
+        };
+        
+        setPricing(currentPricing);
+      } catch (error) {
+        console.error('Error using pricing engine in SimpleBookingSelector:', error);
+        // Fallback to original logic
+        const currentPricing = SimpleBookingLogic.calculatePricing(bookingRequest, facilityRates, equipmentCost);
+        setPricing(currentPricing);
+      }
     } else {
       setPricing(null);
     }
@@ -190,7 +243,7 @@ export default function SimpleBookingSelector({
               type="number"
               min="1"
               max={facilityCapacity}
-              value={attendance}
+              value={attendance === 0 ? '' : attendance}
               onChange={(e) => {
                 const value = e.target.value;
                 // Allow empty string for user to clear input completely
@@ -255,16 +308,23 @@ export default function SimpleBookingSelector({
                   ✅ Tempahan Sah
                 </h4>
                 <p className="text-xs text-green-600">
-                  Tempoh: {SimpleBookingLogic.formatDuration(pricing.breakdown.duration)} | 
-                  Pakej: {pricing.breakdown.packageType}
+                  {pricing.breakdown.detailedBreakdown || `Tempoh: ${SimpleBookingLogic.formatDuration(pricing.breakdown.duration)} | Pakej: ${pricing.breakdown.packageType}`}
                 </p>
+                {(pricing.breakdown as any).savings && (pricing.breakdown as any).savings > 0 && (
+                  <p className="text-xs text-yellow-600 font-medium mt-1">
+                    💰 Jimat: RM{((pricing.breakdown as any).savings).toFixed(2)} (berbanding kadar per jam)
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-green-700">
                   RM{pricing.totalPrice.toFixed(2)}
                 </p>
                 <p className="text-xs text-green-600">
-                  RM{pricing.breakdown.basePrice.toFixed(2)} + RM{(pricing.breakdown.equipmentCost || 0).toFixed(2)}
+                  {pricing.breakdown.equipmentCost && pricing.breakdown.equipmentCost > 0 
+                    ? `RM${pricing.breakdown.basePrice.toFixed(2)} + RM${pricing.breakdown.equipmentCost.toFixed(2)}`
+                    : `RM${pricing.breakdown.basePrice.toFixed(2)}`
+                  }
                 </p>
               </div>
             </div>

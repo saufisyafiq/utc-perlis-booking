@@ -36,6 +36,8 @@ export interface PricingResult {
     packageType: 'PER_JAM' | 'SEPARUH_HARI' | 'SEHARI' | 'MULTI_DAY';
     dailyRate?: number;
     equipmentCost?: number;
+    detailedBreakdown?: string; // Human-readable breakdown
+    savings?: number; // Savings compared to pure hourly rate
   };
 }
 
@@ -90,33 +92,77 @@ export class SimpleBookingLogic {
   ): PricingResult {
     const duration = this.calculateDuration(request);
     const isMultiDay = request.startDate !== request.endDate;
+    const supportsHourly = rates.hourlyRate && rates.hourlyRate > 0;
     
     let basePrice = 0;
     let packageType: 'PER_JAM' | 'SEPARUH_HARI' | 'SEHARI' | 'MULTI_DAY' = 'PER_JAM';
+    let detailedBreakdown = '';
 
     if (isMultiDay) {
       // Multi-day booking
       const days = this.calculateDays(request.startDate, request.endDate);
       basePrice = days * rates.fullDayRate;
       packageType = 'MULTI_DAY';
+      detailedBreakdown = `${days} hari × RM${rates.fullDayRate} = RM${basePrice}`;
+    } else if (!supportsHourly) {
+      // Facilities without hourly rates - use package pricing only
+      if (duration >= 8) {
+        basePrice = rates.fullDayRate;
+        packageType = 'SEHARI';
+        detailedBreakdown = `Satu Hari (${duration} jam) = RM${basePrice}`;
+      } else {
+        basePrice = rates.halfDayRate;
+        packageType = 'SEPARUH_HARI';
+        detailedBreakdown = `Separuh Hari (${duration} jam) = RM${basePrice}`;
+      }
     } else {
-      // Single day booking - choose the best pricing
+      // Single day booking with hourly rates - choose the best pricing
       const hourlyPrice = duration * rates.hourlyRate;
       const halfDayPrice = rates.halfDayRate;
       const fullDayPrice = rates.fullDayRate;
 
       if (duration >= 14) {
         // Full day (14 hours = 8am-10pm)
-        basePrice = Math.min(hourlyPrice, fullDayPrice);
-        packageType = 'SEHARI';
+        if (fullDayPrice <= hourlyPrice) {
+          basePrice = fullDayPrice;
+          packageType = 'SEHARI';
+          detailedBreakdown = `Satu Hari (${duration} jam) = RM${basePrice}`;
+        } else {
+          basePrice = hourlyPrice;
+          packageType = 'PER_JAM';
+          detailedBreakdown = `${duration} jam × RM${rates.hourlyRate} = RM${basePrice}`;
+        }
       } else if (duration >= 6) {
-        // Half day
-        basePrice = Math.min(hourlyPrice, halfDayPrice);
-        packageType = 'SEPARUH_HARI';
+        // For 6+ hours, compare half-day package vs hourly
+        // If half-day + additional hours is cheaper, use that approach
+        if (duration > 6 && duration < 8) {
+          const halfDayPlusAdditional = halfDayPrice + ((duration - 6) * rates.hourlyRate);
+          if (halfDayPlusAdditional < hourlyPrice) {
+            basePrice = halfDayPlusAdditional;
+            packageType = 'SEPARUH_HARI';
+            const additionalHours = duration - 6;
+            detailedBreakdown = `Separuh Hari (6 jam) + ${additionalHours} jam tambahan = RM${halfDayPrice} + RM${(additionalHours * rates.hourlyRate)} = RM${basePrice}`;
+          } else {
+            basePrice = hourlyPrice;
+            packageType = 'PER_JAM';
+            detailedBreakdown = `${duration} jam × RM${rates.hourlyRate} = RM${basePrice}`;
+          }
+        } else {
+          if (halfDayPrice <= hourlyPrice) {
+            basePrice = halfDayPrice;
+            packageType = 'SEPARUH_HARI';
+            detailedBreakdown = `Separuh Hari (${duration} jam) = RM${basePrice}`;
+          } else {
+            basePrice = hourlyPrice;
+            packageType = 'PER_JAM';
+            detailedBreakdown = `${duration} jam × RM${rates.hourlyRate} = RM${basePrice}`;
+          }
+        }
       } else {
         // Hourly
         basePrice = hourlyPrice;
         packageType = 'PER_JAM';
+        detailedBreakdown = `${duration} jam × RM${rates.hourlyRate} = RM${basePrice}`;
       }
     }
 
@@ -126,7 +172,8 @@ export class SimpleBookingLogic {
         basePrice,
         duration,
         packageType,
-        equipmentCost
+        equipmentCost,
+        detailedBreakdown
       }
     };
   }

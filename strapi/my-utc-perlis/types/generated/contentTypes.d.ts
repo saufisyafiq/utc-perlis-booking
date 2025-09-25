@@ -480,7 +480,7 @@ export interface ApiFacilityFacility extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     rates: Schema.Attribute.JSON;
     type: Schema.Attribute.Enumeration<
-      ['MEETING_ROOM', 'SEMINAR_ROOM', 'ICT_ROOM', 'EXHIBITION']
+      ['MEETING_ROOM', 'SEMINAR_ROOM', 'ICT_ROOM', 'EXHIBITION', 'SPORT']
     >;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

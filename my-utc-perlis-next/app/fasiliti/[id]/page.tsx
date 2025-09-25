@@ -155,22 +155,52 @@ export default async function FacilityPage({ params }: { params: Promise<{ id: s
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Kadar Sewaan</h2>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Setiap Jam</span>
-                      <span className="text-lg font-semibold">RM {facility.rates.hourlyRate}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Separuh Hari</span>
-                      <span className="text-lg font-semibold">RM {facility.rates.halfDayRate}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Satu Hari</span>
-                      <span className="text-lg font-semibold">RM {facility.rates.fullDayRate}</span>
-                    </div>
+                    {/* Show day/night rates for sport facilities */}
+                    {facility.type === 'SPORT' && facility.rates.dayRate && facility.rates.nightRate ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="text-gray-600">Kadar Siang</span>
+                            <p className="text-xs text-gray-500">8:00 AM - 7:00 PM</p>
+                          </div>
+                          <span className="text-lg font-semibold">RM {facility.rates.dayRate}/jam</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="text-gray-600">Kadar Malam</span>
+                            <p className="text-xs text-gray-500">8:00 PM - 12:00 AM</p>
+                          </div>
+                          <span className="text-lg font-semibold">RM {facility.rates.nightRate}/jam</span>
+                        </div>
+                        <div className="border-t border-gray-200 pt-4 mt-4">
+                          <p className="text-sm text-gray-600">
+                            <strong>Nota:</strong> Tempahan minimum 2 jam. Harga dikira mengikut kadar masa yang dipilih.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Regular facility rates */}
+                        {facility.rates.hourlyRate && facility.rates.hourlyRate > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">Setiap Jam</span>
+                            <span className="text-lg font-semibold">RM {facility.rates.hourlyRate}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Separuh Hari</span>
+                          <span className="text-lg font-semibold">RM {facility.rates.halfDayRate}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Satu Hari</span>
+                          <span className="text-lg font-semibold">RM {facility.rates.fullDayRate}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="mt-8">
-                    <BookingButton facilityId={id} />
+                    <BookingButton facilityId={id} facilityType={facility.type} />
                   </div>
 
                   <p className="mt-4 text-sm text-gray-500 text-center">

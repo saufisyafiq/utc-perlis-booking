@@ -47,7 +47,8 @@
         "MEETING_ROOM",
         "SEMINAR_ROOM",
         "ICT_ROOM",
-        "EXHIBITION"
+        "EXHIBITION",
+        "SPORT"
       ]
     },
     "facilityStatus": {
