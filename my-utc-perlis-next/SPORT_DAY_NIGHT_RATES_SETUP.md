@@ -131,3 +131,5 @@ To test the day/night rate functionality:
 4. Select different time slots and verify pricing calculations
 5. Complete a booking to ensure backend processing works correctly
 
+
+
